@@ -1,4 +1,8 @@
-module Bot.Test.Util (
+module Bot.Test.TestUtil (
+  testGroupGenerator,
+  testCase,
+  (@?=),
+  
   captureStdOut 
   ) where
 
@@ -9,7 +13,11 @@ import GHC.IO.Handle                  ( hDuplicate, hDuplicateTo)
 import System.Directory               ( removeFile )
 import System.IO                      ( Handle, IOMode(ReadWriteMode), withFile, 
                                         stdout, hFlush,
-                                        hSeek, SeekMode(AbsoluteSeek) )  
+                                        hSeek, SeekMode(AbsoluteSeek) ) 
+import Test.Framework.TH              ( testGroupGenerator )
+import Test.Framework.Providers.HUnit ( testCase ) -- Used by TH
+import Test.HUnit                     ( (@?=) )
+
 
 captureStdOut :: IO a -> ((a, Text) -> IO b) -> IO b
 captureStdOut action processor = do

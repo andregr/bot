@@ -1,9 +1,9 @@
 module Main ( main ) where
 
-import qualified Bot.Test.Integration
-import qualified Bot.Test.Parser
+import qualified Bot.Test.TestIntegration
+import qualified Bot.Test.TestParser
 import Test.Framework                 ( defaultMain )
 
-main = defaultMain [ Bot.Test.Integration.tests 
-                   , Bot.Test.Parser.tests
+main = defaultMain [ Bot.Test.TestIntegration.tests 
+                   , Bot.Test.TestParser.tests
                    ]
