@@ -13,6 +13,7 @@ library
   build-depends:       
     base         == 4.6.*,
     free         == 4.7.1.1-src,
+    monad-loops  == 0.4.*,
     text         == 1.1.*,
     text-format  == 0.3.*,
     transformers == 0.4.1.*
