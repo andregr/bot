@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Bot.Test.TestParser ( tests ) where
+module Bot.Test.TestParser where
 
 import Bot.Test.TestUtil
 import Bot.Parser          
@@ -24,10 +24,16 @@ commands = [ Command "greet" (greet <$> arg "name" string)
            ]
 
 parse :: String -> Either Error [String]
-parse s = runParserFully (allRemaining $ actionParser commands) (words s)
+parse s = runParserFully (allRemaining $ commandApplicationParser commands) (words s)
 
+(==>) :: String -> Either Error [String] -> IO ()
 s ==> r = parse s @?= r
 infixl ==>
+
+case_command_help =
+  map commandHelp commands @?= [ "-greet name"
+                               , "-thank name"
+                               , "-repeat count message"]
 
 case_empty = 
   "" ==> Right []
@@ -52,7 +58,7 @@ case_too_many_args =
 case_bad_argument = 
   "-repeat x a" ==> (Left $ Error [ "Failed to read arguments for command 'repeat':"
                                   , "Failed to read argument 'count':"
-                                  , "Condition failed"
+                                  , "Failed to read digit"
                                   ])
 
 case_unknown_command =
