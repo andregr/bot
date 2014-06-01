@@ -3,7 +3,8 @@
 module Bot.Test.TestParser where
 
 import Bot.Test.TestUtil
-import Bot.Parser          
+import Bot.Parser
+import Bot.Types
 import Control.Applicative ( (<$>), (<*>), pure, (<|>) )
 import Data.Monoid ((<>))
 import Data.Text.Lazy (Text)

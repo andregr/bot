@@ -18,6 +18,7 @@ library
     text-format  == 0.3.*,
     transformers == 0.4.1.*
   exposed-modules:
+    Bot.Config,
     Bot.Parser,
     Bot.Types,
     Bot.Util
@@ -43,8 +44,8 @@ executable bot
     -fwarn-monomorphism-restriction 
     -fwarn-auto-orphans -fno-warn-name-shadowing      
 
-test-suite test-bot
-  hs-source-dirs:      tests
+test-suite bot-test
+  hs-source-dirs:      test
   main-is:             Main.hs  
   build-depends:  
     base         == 4.6.*,
