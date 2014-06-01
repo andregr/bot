@@ -1,7 +1,32 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Bot.Parser where
+module Bot.Parser (
+  Command(..),
+  Arg(..),
+  Error(..),
+  Reader,  
+  Parser,
+  (?),
+  allRemaining,
+  arg,
+  catch,
+  commandApplicationParser,
+  commandHelp ,
+  commandParser ,
+  consumeOne ,
+  digit ,
+  get ,
+  isEndOfInput ,
+  liftArg ,
+  liftReader ,
+  onExcept ,
+  put ,
+  runParser ,
+  runParserFully ,
+  showReader ,
+  string ,
+  throw) where
 
 import Control.Applicative       ( Applicative(..), Alternative(..), (<$>), many )
 import Control.Applicative.Free  ( Ap(..), hoistAp, retractAp, liftAp )
