@@ -1,43 +1,46 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 
-module Bot.Parser (
-  Command(..),
-  Arg(..),
-  Error(..),
-  Reader,  
-  Parser,
-  (?),
-  allRemaining,
-  arg,
-  catch,
-  commandApplicationParser,
-  commandHelp ,
-  commandParser ,
-  consumeOne ,
-  digit ,
-  get ,
-  isEndOfInput ,
-  liftArg ,
-  liftReader ,
-  onExcept ,
-  put ,
-  runParser ,
-  runParserFully ,
-  showReader ,
-  string ,
-  throw) where
+module Bot.Parser 
+  ( Command(..)
+  , Arg(..)
+  , Error(..)
+  , Reader
+  , Parser
+  , (?)
+  , allRemaining
+  , arg
+  , catch
+  , commandApplicationParser
+  , commandHelp
+  , commandParser
+  , consumeOne
+  , integer
+  , get
+  , isEndOfInput
+  , liftArg
+  , liftReader
+  , onExcept
+  , put
+  , runParser
+  , runParserFully
+  , showReader
+  , text
+  , throw
+  ) where
 
-import Control.Applicative       ( Applicative(..), Alternative(..), (<$>), many )
-import Control.Applicative.Free  ( Ap(..), hoistAp, retractAp, liftAp )
-import Control.Arrow             ( (&&&) )
-import Control.Monad.Loops ( whileM )
-import Control.Monad.Trans.Class ( lift )
-import Control.Monad.Trans.Except ( Except, runExcept, throwE, catchE )
-import Control.Monad.Trans.State ( StateT(..), runStateT, liftCatch )
-import qualified Control.Monad.Trans.State as S ( get, put )
-import Data.List (isPrefixOf)
+import Bot.Util ((%), (%%))
+import Control.Applicative (Applicative(..), Alternative(..), (<$>), many)
+import Control.Applicative.Free (Ap(..), hoistAp, retractAp, liftAp)
+import Control.Arrow ((&&&))
+import Control.Monad.Loops (whileM)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (Except, runExcept, throwE, catchE)
+import Control.Monad.Trans.State (StateT(..), runStateT, liftCatch)
+import qualified Control.Monad.Trans.State as S (get, put)
 import Data.Monoid (Monoid, (<>))
+import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as T (unlines, replicate, unwords, isPrefixOf, tail)
+import qualified Data.Text.Lazy.Read as T (decimal)
 
 {-
 A Command has a Reader, which is a function applied to a heterogeneous
@@ -60,29 +63,29 @@ for example, can be implemented using the Alternative functions on Parsers.
 -}
 
 data Command a = Command
-  { commandName :: String
+  { commandName :: Text
   , applyCommand :: Reader a
   }
 
 type Reader = Ap Arg
 
 data Arg a = Arg 
-  { argName :: String
+  { argName :: Text
   , readArg :: Parser a
   } deriving Functor
 
 -- Stack of errors of increasing specificity
-newtype Error = Error [String]
+newtype Error = Error [Text]
   deriving (Eq, Monoid)
 
-newtype Parser a = Parser { unParser :: StateT [String] (Except Error) a }
+newtype Parser a = Parser { unParser :: StateT [Text] (Except Error) a }
   deriving (Functor, Applicative, Alternative, Monad)
 
 instance Show Error where
   show (Error []) = "(no message)"
-  show (Error es) = unlines $ map (\(i, e) -> indent i e) $ zip [1..] es
+  show (Error es) = show $ T.unlines $ map (\(i, e) -> indent i e) $ zip [1..] es
     where
-      indent i e = (concat $ replicate i  "  ") ++ e
+      indent i e = (T.replicate i  "  ") <> e
 
 catch :: Parser a -> (Error -> Parser a) -> Parser a
 catch p h = Parser $ liftCatch catchE (unParser p) (fmap (unParser) h)
@@ -90,22 +93,22 @@ catch p h = Parser $ liftCatch catchE (unParser p) (fmap (unParser) h)
 throw :: Error -> Parser a
 throw = Parser . lift . throwE
 
-onExcept :: Parser a -> String -> Parser a
+onExcept :: Parser a -> Text -> Parser a
 onExcept p m = p `catch` (\e -> throw $ Error [m] <> e)
 
-get :: Parser [String]
+get :: Parser [Text]
 get = Parser S.get
 
-put :: [String] -> Parser ()
+put :: [Text] -> Parser ()
 put = Parser . S.put
 
-showReader :: Reader a -> String
+showReader :: Reader a -> Text
 showReader (Pure _) = ""
 showReader (Ap arg (Pure _)) = argName arg
-showReader (Ap arg rest) = argName arg  ++ " " ++ showReader rest
+showReader (Ap arg rest) = argName arg  <> " " <> showReader rest
 
 -- Arg to Reader
-arg :: String -> Parser a -> Reader a
+arg :: Text -> Parser a -> Reader a
 arg name parser = liftAp $ Arg name parser
 
 -- Transform a Reader into a Parser
@@ -115,19 +118,19 @@ liftReader = retractAp . hoistAp liftArg
 liftArg :: Arg a -> Parser a
 liftArg (Arg name parser) = parser `onExcept` readFailedMsg name
   where
-    readFailedMsg name = "Failed to read argument '" ++ name ++ "':"
+    readFailedMsg name = "Failed to read argument '{}':" % name
 
-runParser :: Parser a -> [String] -> Either Error (a, [String])
+runParser :: Parser a -> [Text] -> Either Error (a, [Text])
 runParser p as = runExcept . (flip runStateT as) . unParser $ p
 
-runParserFully :: Parser a -> [String] -> Either Error a
+runParserFully :: Parser a -> [Text] -> Either Error a
 runParserFully p as = 
   case runParser p as of
     Left e -> Left e
     Right (a, []) -> Right a
-    Right (_, unused) -> Left $ Error ["Unused arguments: '" ++ unwords unused ++ "'"]
+    Right (_, unused) -> Left $ Error ["Unused arguments: '{}'" % T.unwords unused]
 
-consumeOne :: Error -> (String -> Either Error a) -> Parser a
+consumeOne :: Error -> (Text -> Either Error a) -> Parser a
 consumeOne noArgError one = get >>= consume
   where
     consume []         = throw noArgError
@@ -139,13 +142,16 @@ isEndOfInput = null <$> get
 allRemaining :: Parser a -> Parser [a]
 allRemaining p = whileM (not <$> isEndOfInput) p
 
-string :: Parser String
-string = consumeOne (Error ["Missing argument"]) Right
+text :: Parser Text
+text = consumeOne (Error ["Missing argument"]) Right
 
-digit :: Parser Int
-digit = digitParser `onExcept` "Failed to read digit"
-  where
-    digitParser = fmap read $ string ? (`elem` map show ([0..9]:: [Int]))
+integer :: Parser Int
+integer = do
+  maybeInt <- fmap T.decimal text
+  case maybeInt of
+    Left _ -> throw $ Error ["Failed to read integer"]
+    Right (i, "") -> return i
+    Right (_, _) -> throw $ Error ["Failed to read integer"]
 
 (?) :: Parser a -> (a -> Bool) -> Parser a
 p ? c = do
@@ -155,30 +161,29 @@ p ? c = do
     else throw $ Error []
 infixl 6 ?
 
-commandHelp :: Command a -> String
-commandHelp c = "-" ++ commandName c ++ " " ++ showReader (applyCommand c)
+commandHelp :: Command a -> Text
+commandHelp c = "-" <> commandName c <> " " <> showReader (applyCommand c)
 
 commandParser :: [Command a] -> Parser (Command a)
 commandParser commands = do
-    let readCommandName = tail <$> string ? ("-" `isPrefixOf`)
+    let readCommandName = T.tail <$> text ? ("-" `T.isPrefixOf`)
     name <- readCommandName `onExcept` "Missing command"
     case lookup name commandMap of
       Nothing -> throw $ Error [unknownCommandMsg name]
       Just c  -> return c
   where
     commandMap = map (commandName &&& id) commands
-    unknownCommandMsg w = "Unknown command '" ++ w ++ "'"
+    unknownCommandMsg w = "Unknown command '{}'" % w
 
 commandApplicationParser :: [Command a] -> Parser a
 commandApplicationParser commands = do
     command <- commandParser commands
-    args <- many $ string ? (not . isPrefixOf "-")
+    args <- many $ text ? (not . T.isPrefixOf "-")
     case runParser (liftReader $ applyCommand command) args of
       Right (a, [])      -> return a
       Right (_, unused)  -> throw $ Error [tooManyArgsMsg command unused]
       Left e             -> throw $ (Error [wrongArgMsg command] <> e)
   where
-    wrongArgMsg c = "Failed to read arguments for command '" ++ 
-                    commandName c ++ "':"
-    tooManyArgsMsg c u = "Unused arguments for command '" ++ commandName c ++
-                         "': " ++ unwords u
+    wrongArgMsg c = "Failed to read arguments for command '{}':" % commandName c
+    tooManyArgsMsg c u = "Unused arguments for command '{}': {}" %% 
+                            (commandName c, T.unwords u)

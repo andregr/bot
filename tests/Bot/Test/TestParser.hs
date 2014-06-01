@@ -5,28 +5,31 @@ module Bot.Test.TestParser where
 import Bot.Test.TestUtil
 import Bot.Parser          
 import Control.Applicative ( (<$>), (<*>), pure, (<|>) )
+import Data.Monoid ((<>))
+import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as T (unlines, words)
 
-greet :: String -> String
-greet s = "Hello " ++ s ++ "!"
+greet :: Text -> Text
+greet s = "Hello " <> s <> "!"
 
-thank :: String -> String
-thank s = "Thank you, " ++ s ++ "."
+thank :: Text -> Text
+thank s = "Thank you, " <> s <> "."
 
-repeatString :: Int -> String -> String
-repeatString c m = unlines $ take c $ repeat m
+repeatText :: Int -> Text -> Text
+repeatText c m = T.unlines $ take c $ repeat m
 
-commands :: [Command String]
-commands = [ Command "greet" (greet <$> arg "name" string)
-           , Command "thank" (thank <$> arg "name" string)
-           , Command "repeat" (repeatString 
-                                    <$> arg "count" digit            
-                                    <*> arg "message" (string <|> pure "default"))
+commands :: [Command Text]
+commands = [ Command "greet" (greet <$> arg "name" text)
+           , Command "thank" (thank <$> arg "name" text)
+           , Command "repeat" (repeatText 
+                                    <$> arg "count" integer            
+                                    <*> arg "message" (text <|> pure "default"))
            ]
 
-parse :: String -> Either Error [String]
-parse s = runParserFully (allRemaining $ commandApplicationParser commands) (words s)
+parse :: Text -> Either Error [Text]
+parse s = runParserFully (allRemaining $ commandApplicationParser commands) (T.words s)
 
-(==>) :: String -> Either Error [String] -> IO ()
+(==>) :: Text -> Either Error [Text] -> IO ()
 s ==> r = parse s @?= r
 infixl ==>
 
@@ -58,7 +61,7 @@ case_too_many_args =
 case_bad_argument = 
   "-repeat x a" ==> (Left $ Error [ "Failed to read arguments for command 'repeat':"
                                   , "Failed to read argument 'count':"
-                                  , "Failed to read digit"
+                                  , "Failed to read integer"
                                   ])
 
 case_unknown_command =

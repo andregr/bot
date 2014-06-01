@@ -6,6 +6,7 @@ module Bot.Util
     Text
   , Only(..)
   , (%)
+  , (%%)
   , printf
   , commas
   ) where
@@ -20,9 +21,14 @@ import qualified Data.Text.Lazy as T   ( intercalate )
 -- Formatting
 -------------------------------------------------
 
-(%) :: Params ps => Format -> ps -> Text
-(%) = format
-infix 9 %
+(%) :: Format -> Text -> Text
+f % t = f %% (Only t)
+infixl 9 %
+
+
+(%%) :: Params ps => Format -> ps -> Text
+(%%) = format
+infixl 9 %%
 
 printf :: (MonadIO m, Params ps) => Format -> ps -> m ()
 printf = T.print
