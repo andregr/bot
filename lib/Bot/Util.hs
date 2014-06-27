@@ -8,6 +8,7 @@ module Bot.Util
   , (%)
   , (%%)
   , printf
+  , putf
   , commas
   ) where
 
@@ -31,8 +32,11 @@ infixl 9 %
 (%%) = format
 infixl 9 %%
 
+putf :: (MonadIO m, Params ps) => Format -> ps -> m ()
+putf = T.print
+
 printf :: (MonadIO m, Params ps) => Format -> ps -> m ()
-printf f ps = T.print (f <> "\n") ps
+printf f ps = putf (f <> "\n") ps
 
 commas :: [Text] -> Text
 commas ts = T.intercalate ", " ts

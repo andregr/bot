@@ -2,7 +2,9 @@
 
 module Bot.Run where
 
-import Bot.Action
+import Bot.Action.Action
+import Bot.Action.Maven
+import Bot.Action.Git
 import Bot.Parser
 import Bot.Types
 import Bot.Util
@@ -28,13 +30,17 @@ projects workspace = do
 
 configuration :: Configuration
 configuration = Configuration
-    [ Command "clean"    (repeatedly (silentProjectCommand "mvn clean") <$> workspaceProjects)
-    , Command "install"  (repeatedly (silentProjectCommand "mvn install") <$> workspaceProjects)
-    , Command "status"   (repeatedly gitStatus <$> workspaceProjects)
-    , Command "branch"   (gitBranch <$> arg "project" (project ws) <*> arg "branch" text)
+    [ Command "clean"
+          (repeatedly2 maven <$> pure "clean" <*> workspaceProjects)
+    , Command "install"
+          (repeatedly2 maven <$> pure "install" <*> workspaceProjects)
+    , Command "status"
+          (repeatedly status <$> workspaceProjects)
+    , Command "createBranch"
+          (repeatedly2 createBranch <$> arg "branch" text <*> workspaceProjects)
     ]
   where
-    ws = "/Users/andre/Code/bot/test/data"
+    ws = "/home/andregr/work/workspace"
     workspaceProjects = arg "projects" $ projects ws
 
 run :: [String] -> IO ()
