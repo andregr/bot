@@ -1,9 +1,10 @@
-{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor, DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Bot.Types 
   ( Configuration(..)
   , Action
-  , Result(..) 
+  , ActionException(..)
+  , Project(..)
   , Command(..)
   , Arg(..)
   , Reader
@@ -13,17 +14,24 @@ module Bot.Types
 
 import Control.Applicative (Applicative, Alternative)
 import Control.Applicative.Free (Ap)
+import Control.Exception (Exception)
 import Control.Monad.Trans.Except (Except)
 import Control.Monad.Trans.State (StateT)
+import Data.Typeable (Typeable)
 import Data.Monoid (Monoid)
-import Data.Text.Lazy (Text)
+import Data.Text.Lazy (Text, unpack)
 
-data Configuration = Configuration [Command Action]
+data Configuration = Configuration { configCommands :: [Command Action] }
 
-type Action = IO Result
+type Action = IO ()
 
-data Result = Failure | Success
-  deriving (Eq, Show)
+data ActionException = ActionException Text
+  deriving (Show, Typeable)
+
+instance Exception ActionException
+
+data Project = Project { projectName :: Text, projectPath :: FilePath }
+  deriving Show
 
 {-
 Parsing:
@@ -68,6 +76,6 @@ newtype Parser a = Parser { unParser :: StateT [Text] (Except Error) a }
 
 instance Show Error where
   show (Error []) = "(no message)"
-  show (Error es) = show $ unlines $ map (\(i, e) -> indent i e) $ zip [1..] es
+  show (Error es) = unlines $ map (\(i, e) -> indent i e) $ zip [0..] es
     where
-      indent i e = (concat $ replicate i  "  ") ++ show e  
+      indent i e = (concat $ replicate i  "    ") ++ unpack e  

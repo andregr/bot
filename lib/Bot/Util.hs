@@ -12,6 +12,7 @@ module Bot.Util
   ) where
 
 import Control.Monad.IO.Class          ( MonadIO )
+import Data.Monoid
 import Data.Text.Format                ( Format, Only(..), format )
 import qualified Data.Text.Format as T ( print )
 import Data.Text.Format.Params         ( Params )
@@ -31,7 +32,7 @@ infixl 9 %
 infixl 9 %%
 
 printf :: (MonadIO m, Params ps) => Format -> ps -> m ()
-printf = T.print
+printf f ps = T.print (f <> "\n") ps
 
 commas :: [Text] -> Text
 commas ts = T.intercalate ", " ts

@@ -11,19 +11,26 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      lib  
   build-depends:       
-    base         == 4.6.*,
-    free         == 4.7.1.1-src,
-    monad-loops  == 0.4.*,
-    text         == 1.1.*,
-    text-format  == 0.3.*,
-    transformers == 0.4.1.*
+    base          == 4.6.*,
+    directory     == 1.2.*,
+    free          == 4.9.*,
+    monad-loops   == 0.4.*,
+    process       == 1.2.*,
+    temporary     == 1.2.*,
+    text          == 1.1.*,
+    text-format   == 0.3.*,
+    transformers  == 0.4.*,
+    unix          == 2.7.*
   exposed-modules:
+    Bot.Action,
     Bot.Config,
     Bot.Parser,
+    Bot.Run,
     Bot.Types,
     Bot.Util
   default-language:    Haskell2010
   ghc-options:         
+    -threaded
     -Wall 
     -fwarn-tabs -fwarn-incomplete-uni-patterns 
     -fwarn-incomplete-record-updates  
@@ -38,6 +45,7 @@ executable bot
     bot    
   default-language:    Haskell2010
   ghc-options:         
+    -threaded
     -Wall 
     -fwarn-tabs -fwarn-incomplete-uni-patterns 
     -fwarn-incomplete-record-updates  
@@ -45,7 +53,7 @@ executable bot
     -fwarn-auto-orphans -fno-warn-name-shadowing      
 
 test-suite bot-test
-  hs-source-dirs:      test
+  hs-source-dirs:      test/src
   main-is:             Main.hs  
   build-depends:  
     base         == 4.6.*,
@@ -60,6 +68,7 @@ test-suite bot-test
   default-language:    Haskell2010
   default-extensions:  TemplateHaskell
   ghc-options:         
+    -threaded
     -Wall 
     -fwarn-tabs -fwarn-incomplete-uni-patterns 
     -fwarn-incomplete-record-updates  

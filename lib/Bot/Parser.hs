@@ -9,10 +9,12 @@ module Bot.Parser
   , commandParser
   , integer
   , isEndOfInput
+  , path
   , runParser
   , runParserFully
   , showReader
   , text
+  , throwP
   ) where
 
 import Bot.Types (Command(..), Arg(..), Reader, Parser(..), Error(..))
@@ -27,17 +29,17 @@ import Control.Monad.Trans.State (StateT(..), runStateT, liftCatch)
 import qualified Control.Monad.Trans.State as S (get, put)
 import Data.Monoid ((<>))
 import Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy as T (unwords, isPrefixOf, tail)
+import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Read as T (decimal)
 
 catch :: Parser a -> (Error -> Parser a) -> Parser a
 catch p h = Parser $ liftCatch catchE (unParser p) (fmap (unParser) h)
 
-throw :: Error -> Parser a
-throw = Parser . lift . throwE
+throwP :: Error -> Parser a
+throwP = Parser . lift . throwE
 
 onExcept :: Parser a -> Text -> Parser a
-onExcept p m = p `catch` (\e -> throw $ Error [m] <> e)
+onExcept p m = p `catch` (\e -> throwP $ Error [m] <> e)
 
 get :: Parser [Text]
 get = Parser S.get
@@ -76,8 +78,8 @@ runParserFully p as =
 consumeOne :: Error -> (Text -> Either Error a) -> Parser a
 consumeOne noArgError one = get >>= consume
   where
-    consume []         = throw noArgError
-    consume (arg:args) = either throw (\a -> put args >> return a) (one arg)    
+    consume []         = throwP noArgError
+    consume (arg:args) = either throwP (\a -> put args >> return a) (one arg)    
 
 isEndOfInput :: Parser Bool
 isEndOfInput = null <$> get
@@ -88,20 +90,23 @@ allRemaining p = whileM (not <$> isEndOfInput) p
 text :: Parser Text
 text = consumeOne (Error ["Missing argument"]) Right
 
+path :: Parser FilePath
+path = fmap T.unpack text
+
 integer :: Parser Int
 integer = do
   maybeInt <- fmap T.decimal text
   case maybeInt of
-    Left _ -> throw $ Error ["Failed to read integer"]
+    Left _ -> throwP $ Error ["Failed to read integer"]
     Right (i, "") -> return i
-    Right (_, _) -> throw $ Error ["Failed to read integer"]
+    Right (_, _) -> throwP $ Error ["Failed to read integer"]
 
 (?) :: Parser a -> (a -> Bool) -> Parser a
 p ? c = do
   a <- p
   if c a 
     then return a 
-    else throw $ Error []
+    else throwP $ Error []
 infixl 6 ?
 
 commandHelp :: Command a -> Text
@@ -112,7 +117,7 @@ commandParser commands = do
     let readCommandName = T.tail <$> text ? ("-" `T.isPrefixOf`)
     name <- readCommandName `onExcept` "Missing command"
     case lookup name commandMap of
-      Nothing -> throw $ Error [unknownCommandMsg name]
+      Nothing -> throwP $ Error [unknownCommandMsg name]
       Just c  -> return c
   where
     commandMap = map (commandName &&& id) commands
@@ -124,8 +129,8 @@ commandApplicationParser commands = do
     args <- many $ text ? (not . T.isPrefixOf "-")
     case runParser (liftReader $ applyCommand command) args of
       Right (a, [])      -> return a
-      Right (_, unused)  -> throw $ Error [tooManyArgsMsg command unused]
-      Left e             -> throw $ (Error [wrongArgMsg command] <> e)
+      Right (_, unused)  -> throwP $ Error [tooManyArgsMsg command unused]
+      Left e             -> throwP $ (Error [wrongArgMsg command] <> e)
   where
     wrongArgMsg c = "Failed to read arguments for command '{}':" % commandName c
     tooManyArgsMsg c u = "Unused arguments for command '{}': {}" %% 

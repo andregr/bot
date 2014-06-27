@@ -1,8 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
-import Bot.Util (Only(..), printf)
+import Bot.Run
+import System.Environment
 
 main :: IO ()
-main = printf "Hello, world! {}" (Only (1::Integer))
+main = getArgs >>= run
