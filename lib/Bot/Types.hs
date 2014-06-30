@@ -1,27 +1,29 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveFunctor, DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Bot.Types 
-  ( Configuration(..)
-  , Action
+  ( Action
   , ActionException(..)
   , Project(..)
+  , Application(..)
+  , Configuration(..)
   , Command(..)
   , Arg(..)
   , Reader
   , Parser(..)
   , Error(..)
+  , ShowHelp(..)
   ) where
 
+import Bot.Util
 import Control.Applicative (Applicative, Alternative)
-import Control.Applicative.Free (Ap)
+import Control.Applicative.Free
 import Control.Exception (Exception)
 import Control.Monad.Trans.Except (Except)
 import Control.Monad.Trans.State (StateT)
 import Data.Typeable (Typeable)
-import Data.Monoid (Monoid)
-import Data.Text.Lazy (Text, unpack)
-
-data Configuration = Configuration { configCommands :: [Command Action] }
+import Data.Monoid
+import qualified Data.Text.Lazy as T
 
 type Action = IO ()
 
@@ -32,6 +34,19 @@ instance Exception ActionException
 
 data Project = Project { projectName :: Text, projectPath :: FilePath }
   deriving Show
+
+data Application a = Application
+  { applicationCommand :: Command a
+  , applicationArgs :: [Text]
+  }
+
+data Configuration = Configuration
+  { configCommands :: [Command Action]
+  , configHelp :: Text
+  }
+
+instance ShowHelp Configuration where
+  showHelp = configHelp
 
 {-
 Parsing:
@@ -55,12 +70,23 @@ not for Args themselves, which contain Parsers. This means that optional argumen
 for example, can be implemented using the Alternative functions on Parsers.
 -}
 
+class ShowHelp a where
+  showHelp :: a -> Text
+
 data Command a = Command
   { commandName :: Text
   , applyCommand :: Reader a
   }
 
+instance ShowHelp (Command a) where
+  showHelp c = "-" <> commandName c <> " " <> showReader (applyCommand c)
+
 type Reader = Ap Arg
+
+showReader :: Reader a -> Text
+showReader (Pure _) = ""
+showReader (Ap arg (Pure _)) = argName arg
+showReader (Ap arg rest) = argName arg  <> " " <> showReader rest
 
 data Arg a = Arg 
   { argName :: Text
@@ -76,6 +102,4 @@ newtype Parser a = Parser { unParser :: StateT [Text] (Except Error) a }
 
 instance Show Error where
   show (Error []) = "(no message)"
-  show (Error es) = unlines $ map (\(i, e) -> indent i e) $ zip [0..] es
-    where
-      indent i e = (concat $ replicate i  "    ") ++ unpack e  
+  show (Error es) = unlines $ map (\(i, e) -> T.unpack $ indent i e) $ zip [0..] es

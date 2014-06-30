@@ -12,6 +12,7 @@ library
   hs-source-dirs:      lib  
   build-depends:       
     base          == 4.6.*,
+    attoparsec    == 0.12.*,
     directory     == 1.2.*,
     free          == 4.9.*,
     monad-loops   == 0.4.*,

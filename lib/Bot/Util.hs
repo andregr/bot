@@ -10,15 +10,17 @@ module Bot.Util
   , printf
   , putf
   , commas
+  , indent
   ) where
 
 import Control.Monad.IO.Class          ( MonadIO )
+import Data.Int                        ( Int64 )
 import Data.Monoid
 import Data.Text.Format                ( Format, Only(..), format )
 import qualified Data.Text.Format as T ( print )
 import Data.Text.Format.Params         ( Params )
 import Data.Text.Lazy                  ( Text )
-import qualified Data.Text.Lazy as T   ( intercalate )
+import qualified Data.Text.Lazy as T
 
 -- Formatting
 -------------------------------------------------
@@ -40,3 +42,6 @@ printf f ps = putf (f <> "\n") ps
 
 commas :: [Text] -> Text
 commas ts = T.intercalate ", " ts
+
+indent :: Int64 -> Text -> Text
+indent i t = (T.replicate i  "    ") <> t
