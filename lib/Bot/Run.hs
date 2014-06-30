@@ -20,8 +20,8 @@ run argStrings = do
     action `catch` \(ActionException e) -> do
       let cmd = T.unwords args
       if T.null e
-         then printf "Command '{}' failed" (Only cmd)
-         else printf "Command '{}' failed:\n{}" (cmd, e)
+         then printf "\n\nCommand '{}' failed" (Only cmd)
+         else printf "\n\nCommand '{}' failed:\n{}" (cmd, e)
       exitFailure
   where
     args = fmap pack argStrings

@@ -29,11 +29,18 @@ configuration = Configuration commands help
           (repeatedly2 createBranch <$> arg "branch" text <*> workspaceProjects)
       ]
 
-    workspace = "/home/andregr/work/workspace"
+    -- workspace = "/home/andregr/work/workspace"
+    workspace = "/Users/andre/Code/bot/test/data"
     
     projects = map wsProject
       [
-        "comercial"
+        "my-app"
+      , "my-app2"
+      , "my-app3"
+      , "my-app4"
+      , "my-app5"
+        
+      , "comercial"
       , "faturamento"
       , "bpa-comercial"
       ]

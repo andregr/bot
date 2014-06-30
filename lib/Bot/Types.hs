@@ -35,6 +35,9 @@ instance Exception ActionException
 data Project = Project { projectName :: Text, projectPath :: FilePath }
   deriving Show
 
+instance Eq Project where
+  a == b = projectName a == projectName b
+
 data Application a = Application
   { applicationCommand :: Command a
   , applicationArgs :: [Text]
