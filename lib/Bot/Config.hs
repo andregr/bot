@@ -18,16 +18,16 @@ configuration = Configuration commands help
   where
     commands =
       [ Command "clean"
-          (repeatedly2 maven <$> pure "clean" <*> workspaceProjects)
+          (forEachProject2 maven <$> pure "clean" <*> workspaceProjects)
           
       , Command "install"
-          (repeatedly2 maven <$> pure "install" <*> workspaceProjects)
+          (forEachProject2 maven <$> pure "install" <*> workspaceProjects)
           
       , Command "status"
-          (repeatedly status <$> workspaceProjects)
+          (forEachProject status <$> workspaceProjects)
           
       , Command "createBranch"
-          (repeatedly2 createBranch <$> arg "branch" text <*> workspaceProjects)
+          (forEachProject2 createBranch <$> arg "branch" text <*> workspaceProjects)
       ]
 
     -- workspace = "/home/andregr/work/workspace"

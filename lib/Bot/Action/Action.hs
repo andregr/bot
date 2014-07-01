@@ -4,8 +4,8 @@ module Bot.Action.Action
   ( bash
   , bashInteractive
   , cd
-  , repeatedly
-  , repeatedly2
+  , forEachProject
+  , forEachProject2
   , silentProjectCommand
   ) where
 
@@ -89,12 +89,12 @@ showOutput c
           -- +G: start from the end of the output
           bashInteractive ("less +G {}" % T.pack path)
 
-repeatedly :: (Project -> IO ()) -> [Project] -> IO ()
-repeatedly action projects = forM_ projects $ \project -> do
+forEachProject :: (Project -> IO ()) -> [Project] -> IO ()
+forEachProject action projects = forM_ projects $ \project -> do
     putf "{}:\t\t" (Only $ projectName project) >> action project
 
-repeatedly2 :: (a -> Project -> IO ()) -> a -> [Project] -> IO ()
-repeatedly2 action arg1 projects = forM_ projects $ \project -> do
+forEachProject2 :: (a -> Project -> IO ()) -> a -> [Project] -> IO ()
+forEachProject2 action arg1 projects = forM_ projects $ \project -> do
     putf "{}:\t\t" (Only $ projectName project) >> action arg1 project
 
 
