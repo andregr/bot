@@ -28,19 +28,25 @@ configuration = Configuration commands help
           
       , Command "createBranch" $
           forEachProject2 createBranch <$> arg "branch" text <*> workspaceProjects
+      , Command "version" $
+          forEachProject version <$> workspaceProjects
+
+      , Command "properties" $
+          forEachProject properties <$> workspaceProjects
       ]
 
-    -- workspace = "/home/andregr/work/workspace"
-    workspace = "/Users/andre/Code/bot/test/data"
+    workspace = "/home/andregr/work/workspace"
+    -- workspace = "/Users/andre/Code/bot/test/data"
     
     projects = map wsProject
       [
-        "my-app"
-      , "my-app2"
-      , "my-app3"
-      , "my-app4"
-      , "my-app5"
-        
+      --  "my-app"
+      --, "my-app2"
+      --, "my-app3"
+      --, "my-app4"
+      --, "my-app5"
+
+        "cobranca-api"
       , "comercial"
       , "faturamento"
       , "bpa-comercial"
