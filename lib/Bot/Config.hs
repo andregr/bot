@@ -17,17 +17,17 @@ configuration :: Configuration
 configuration = Configuration commands help
   where
     commands =
-      [ Command "clean"
-          (forEachProject2 maven <$> pure "clean" <*> workspaceProjects)
+      [ Command "clean" $
+          forEachProject2 maven <$> pure "clean" <*> workspaceProjects
           
-      , Command "install"
-          (forEachProject2 maven <$> pure "install" <*> workspaceProjects)
+      , Command "install" $
+          forEachProject2 maven <$> pure "install" <*> workspaceProjects
           
-      , Command "status"
-          (forEachProject status <$> workspaceProjects)
+      , Command "status" $
+          forEachProject status <$> workspaceProjects
           
-      , Command "createBranch"
-          (forEachProject2 createBranch <$> arg "branch" text <*> workspaceProjects)
+      , Command "createBranch" $
+          forEachProject2 createBranch <$> arg "branch" text <*> workspaceProjects
       ]
 
     -- workspace = "/home/andregr/work/workspace"
