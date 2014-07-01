@@ -3,7 +3,8 @@
 module Bot.Run where
 
 import Bot.Config
-import Bot.Parser
+import Bot.Parser.Command
+import Bot.Parser.Parser
 import Bot.Types
 import Bot.Util
 import Control.Exception
@@ -14,7 +15,8 @@ import System.Exit
 run :: [String] -> IO ()
 run argStrings = do
     case args of
-      ["-h"] -> T.putStrLn (showHelp configuration) >> exitSuccess
+      []     -> printHelp >> exitFailure
+      ["-h"] -> printHelp >> exitSuccess
       _      -> return ()
     action <- parseAction (configCommands configuration) args
     action `catch` \(ActionException e) -> do
@@ -25,6 +27,7 @@ run argStrings = do
       exitFailure
   where
     args = fmap pack argStrings
+    printHelp = T.putStrLn (showHelp configuration)
 
 parseAction :: [Command Action] -> [Text] -> IO Action
 parseAction commands args = do

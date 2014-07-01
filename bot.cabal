@@ -27,7 +27,9 @@ library
     Bot.Action.Git,
     Bot.Action.Maven,
     Bot.Config,
-    Bot.Parser,
+    Bot.Parser.Command,
+    Bot.Parser.Parser,
+    Bot.Parser.Project,
     Bot.Run,
     Bot.Types,
     Bot.Util

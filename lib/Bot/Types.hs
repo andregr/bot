@@ -21,9 +21,9 @@ import Control.Applicative.Free
 import Control.Exception (Exception)
 import Control.Monad.Trans.Except (Except)
 import Control.Monad.Trans.State (StateT)
-import Data.Typeable (Typeable)
 import Data.Monoid
 import qualified Data.Text.Lazy as T
+import Data.Typeable (Typeable)
 
 type Action = IO ()
 

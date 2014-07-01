@@ -2,13 +2,14 @@
 
 module Bot.Config where
 
-import Control.Applicative
 import Bot.Action.Action
 import Bot.Action.Git
 import Bot.Action.Maven
-import Bot.Util
-import Bot.Parser
+import Bot.Parser.Parser
+import Bot.Parser.Project
 import Bot.Types
+import Bot.Util
+import Control.Applicative
 import Data.Monoid
 import qualified Data.Text.Lazy as T
 
