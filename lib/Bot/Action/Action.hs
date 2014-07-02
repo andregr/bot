@@ -13,7 +13,9 @@ import Bot.Types
 import Bot.Util
 import Control.Exception
 import Control.Monad
+import Data.Monoid
 import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.IO as T
 import System.Directory
 import System.Exit
 import System.IO
@@ -21,28 +23,12 @@ import System.IO.Temp
 import System.Posix.IO
 import System.Process
 
-makeBashCommand :: Text -> Text
-makeBashCommand cmd = script 
-  where   
-    -- Several tricks are needed to get bash to expand aliases in
-    -- non-intective shells:
-    -- * PS1 is set to pretend the shell is interactive, fooling .bashrc
-    -- * The expand_aliases option is set
-    -- * .bashrc is sourced
-    -- * __On a separate line__ the command is executed, because bash only
-    --   expands aliases in lines after they are defined
-    script = T.unlines [ "export PS1=\"-\""
-                     , "shopt -s expand_aliases"
-                     , "source ~/.bash_profile"
-                     , cmd
-                     ]
-
 bash :: Text -> IO String
 bash cmd = do
     (readfd, writefd) <- createPipe
     writeh <- fdToHandle writefd
 
-    (_, _, _, p) <- createProcess (shell (T.unpack $ makeBashCommand cmd)) 
+    (_, _, _, p) <- createProcess (shell (T.unpack cmd)) 
                                            { std_out = UseHandle writeh
                                            , std_err = UseHandle writeh
                                            , close_fds = False
@@ -56,7 +42,7 @@ bash cmd = do
 
 bashInteractive :: Text -> IO ()
 bashInteractive cmd = do
-    (_, _, _, p) <- createProcess (shell (T.unpack $ makeBashCommand cmd)) 
+    (_, _, _, p) <- createProcess (shell (T.unpack cmd)) 
                                      { close_fds = False }
     exitCode <- waitForProcess p
     case exitCode of
@@ -91,12 +77,14 @@ showOutput c
 
 forEachProject :: (Project -> IO ()) -> [Project] -> IO ()
 forEachProject action projects = forM_ projects $ \project -> do
-    putf "{}:\t\t" (Only $ projectName project) >> action project
+    putProjectName project >> action project
 
 forEachProject2 :: (a -> Project -> IO ()) -> a -> [Project] -> IO ()
 forEachProject2 action arg1 projects = forM_ projects $ \project -> do
-    putf "{}:\t\t" (Only $ projectName project) >> action arg1 project
+    putProjectName project >> action arg1 project
 
+putProjectName :: Project -> IO ()
+putProjectName p = T.putStr (leftAlign 20 $ projectName p <> ":  ")
 
 silentProjectCommand :: Text -> Project -> IO ()
 silentProjectCommand cmd project =

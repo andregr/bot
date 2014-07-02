@@ -11,6 +11,8 @@ module Bot.Util
   , putf
   , commas
   , indent
+  , leftAlign
+  , rightAlign
   ) where
 
 import Control.Monad.IO.Class          ( MonadIO )
@@ -45,3 +47,9 @@ commas ts = T.intercalate ", " ts
 
 indent :: Int64 -> Text -> Text
 indent i t = (T.replicate i  "    ") <> t
+
+rightAlign :: Int64 -> Text -> Text
+rightAlign s t = T.replicate (s - T.length t) " " <> t
+
+leftAlign :: Int64 -> Text -> Text
+leftAlign s t = t <> T.replicate (s - T.length t) " "
