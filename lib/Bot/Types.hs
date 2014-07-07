@@ -51,12 +51,10 @@ data Application a = Application
   }
 
 data Configuration = Configuration
-  { configCommands :: [Command Action]
+  { configName :: Text
+  , configCommands :: [Command Action]
   , configHelp :: Text
   }
-
-instance ShowHelp Configuration where
-  showHelp = configHelp
 
 {-
 Parsing:

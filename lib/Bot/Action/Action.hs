@@ -46,7 +46,7 @@ bash cmd = do
         output <- hGetContents h
         case copyOutput of
           Off      -> return ()
-          ToFile f -> appendOutput f output
+          ToFile f -> appendOutput cmd f output
 
         exitCode <- waitForProcess p
           
@@ -57,11 +57,14 @@ bash cmd = do
           ExitSuccess   -> return strictOutput
           ExitFailure _ -> throwA $ T.pack strictOutput
   where
-    appendOutput :: FilePath -> String -> IO ()
-    appendOutput path s = do
+    appendOutput :: Text -> FilePath -> String -> IO ()
+    appendOutput cmd path s = do
       withFile path AppendMode $ \h -> do
         -- No buffering for streaming output
         hSetBuffering h NoBuffering
+        dir <- getCurrentDirectory
+        hPutStr h $ T.unpack $
+          "\n\nOutput of '{}' in directory '{}':\n--------------\n\n" %% (cmd, T.pack dir)
         hPutStr h s
 
 bashInteractive :: Text -> IO ()

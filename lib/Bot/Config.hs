@@ -13,8 +13,16 @@ import Control.Applicative
 import Data.Monoid
 import qualified Data.Text.Lazy as T
 
-configuration :: Configuration
-configuration = Configuration commands help
+defaultConfiguration :: Configuration
+defaultConfiguration = configurations !! 0
+
+configurations :: [Configuration]
+configurations = [ makeConfiguration "real" realWorkspace
+                 , makeConfiguration "test" testWorkspace
+                 ]
+
+makeConfiguration :: Text -> [Project] -> Configuration
+makeConfiguration name projects = Configuration name commands help
   where
     commands =
       [ Command "clean" $
@@ -35,27 +43,6 @@ configuration = Configuration commands help
       , Command "properties" $
           forEachProject properties <$> workspaceProjects
       ]
-
-    workspace = "/home/andregr/work/workspace"
-    -- workspace = "/Users/andre/Code/bot/test/data"
-    
-    projects = map wsProject
-      [
-      --  "my-app"
-      --, "my-app2"
-      --, "my-app3"
-      --, "my-app4"
-      --, "my-app5"
-
-        "financeiro"
-      , "cobranca-api"
-      , "geradorrps"
-      , "comercial"
-      , "faturamento"
-      , "bpa-comercial"
-      ]
-
-    wsProject name = Project name (T.unpack $ workspace <> "/" <> name)
     
     workspaceProjects = arg "projects" $ projectsParser projects
 
@@ -67,3 +54,33 @@ configuration = Configuration commands help
              ++ [ "Projects:" ]
              ++ [ "" ]
              ++ map (indent 1 . projectName) projects
+
+realWorkspace :: [Project]
+realWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace"
+    projects = map wsProject
+      [
+        "financeiro"
+      , "cobranca-api"
+      , "geradorrps"
+      , "comercial"
+      , "faturamento"
+      , "bpa-comercial"
+      ]
+    wsProject name = Project name (T.unpack $ workspace <> "/" <> name)          
+
+
+testWorkspace :: [Project]
+testWorkspace = projects
+  where
+    workspace = "/Users/andre/Code/bot/test/data"
+    projects = map wsProject
+      [
+        "my-app"
+      , "my-app2"
+      , "my-app3"
+      , "my-app4"
+      , "my-app5"
+      ]
+    wsProject name = Project name (T.unpack $ workspace <> "/" <> name)    
