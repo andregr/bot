@@ -29,11 +29,11 @@ applicationParser commands = Application <$> parseCommand <*> parseArgs
     parseCommand = commandParser commands
     parseArgs = many $ text ? (not . T.isPrefixOf "-")
 
-actionParser :: [Command a] -> Parser a
+actionParser :: [Command a] -> Parser (Text, a)
 actionParser commands = do
     (Application command args) <- applicationParser commands
     case runParser (liftReader $ applyCommand command) args of
-      Right (a, [])      -> return a
+      Right (a, [])      -> return (T.unwords $ (commandName command : args), a)
       Right (_, unused)  -> throwP $ Error [tooManyArgsMsg command unused]
       Left e             -> throwP $ (Error [wrongArgMsg command] <> e)
   where

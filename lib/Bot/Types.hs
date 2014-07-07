@@ -32,7 +32,7 @@ type Action = Trans.ReaderT BashCopyOutput IO ()
 
 type ActionM = Trans.ReaderT BashCopyOutput IO
 
-data BashCopyOutput = Off | ToFile FilePath
+data BashCopyOutput = Off | ToStdout | ToFile FilePath
 
 data ActionException = ActionException Text
   deriving (Show, Typeable)

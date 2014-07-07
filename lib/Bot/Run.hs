@@ -12,6 +12,7 @@ import Control.Arrow
 import Control.Monad
 import Control.Monad.Catch
 import Control.Monad.Trans.Reader
+import Data.Monoid
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import System.Exit
@@ -24,12 +25,11 @@ run argStrings = do
     when (null args) $ printHelp >> exitFailure
     
     execution <- parseExecution args
-    (copyBashOutput, _, action) <- case execution of
+    (copyBashOutput, _, (cmd, action)) <- case execution of
       ShowHelp                     -> printHelp >> exitSuccess
       RunAction copyBashOutput c a -> return (copyBashOutput, c, a)
       
     runReaderT action copyBashOutput `catch` \(ActionException e) -> do
-      let cmd = T.unwords args
       if T.null e
          then printf "\n\nCommand '{}' failed" (Only cmd)
          else printf "\n\nCommand '{}' failed:\n{}" (cmd, e)
@@ -37,23 +37,37 @@ run argStrings = do
   where
     args = fmap T.pack argStrings
     printHelp = T.putStr $ T.unlines $
-                   [ "Usage: bot [--help] [--config NAME] [--pipe-bash-to FILENAME] COMMAND" ]
+                   [ "Usage: bot [--help] [--config NAME] " <>
+                     "[--show-command-output | --pipe-commands-to FILENAME] COMMAND" ]
                 ++ [ "where " ]
                 ++ [ "" ]
                 ++ [ allConfigsHelp ]
 
-data Execution = ShowHelp | RunAction BashCopyOutput Configuration Action
+allConfigsHelp :: Text
+allConfigsHelp = T.unlines $
+  map (\c -> "Configuration '{}':\n---------\n\n{}\n" %%
+     (configName c, configHelp c)) configurations
+
+data Execution = ShowHelp
+               | RunAction BashCopyOutput Configuration (Text, Action)
+
+parseExecution :: [Text] -> IO Execution
+parseExecution args = do
+  let maybeAction = runParserFully executionParser args
+  case maybeAction of
+    Left e  -> putStrLn (show e) >> exitFailure
+    Right a -> return a
 
 executionParser :: Parser Execution
 executionParser = do
   let helpParser = fmap Just (constant "-h" <|> constant "--help") <|> pure Nothing
   help <- helpParser
   case help of
+    Just _  -> return ShowHelp
     Nothing -> do
       config <- configurationParser
       let commands = configCommands config
-      RunAction <$> bashCopyOutputParser <*> pure config  <*>actionParser commands
-    _       -> return ShowHelp
+      RunAction <$> bashCopyOutputParser <*> pure config <*> actionParser commands
 
 configurationParser :: Parser Configuration
 configurationParser = do
@@ -69,16 +83,6 @@ configurationParser = do
 
 bashCopyOutputParser :: Parser BashCopyOutput
 bashCopyOutputParser = do
-  (const ToFile <$> constant "--pipe-bash-to" <*> path) <|> pure Off
-
-parseExecution :: [Text] -> IO Execution
-parseExecution args = do
-  let maybeAction = runParserFully executionParser args
-  case maybeAction of
-    Left e  -> putStrLn (show e) >> exitFailure
-    Right a -> return a
-
-allConfigsHelp :: Text
-allConfigsHelp = T.unlines $
-  map (\c -> "Configuration '{}':\n---------\n\n{}\n" %%
-     (configName c, configHelp c)) configurations
+      (const ToStdout <$> constant "--show-command-output")
+  <|> (const ToFile <$> constant "--pipe-commands-to" <*> path)
+  <|> pure Off

@@ -46,7 +46,8 @@ bash cmd = do
         output <- hGetContents h
         case copyOutput of
           Off      -> return ()
-          ToFile f -> appendOutput cmd f output
+          ToFile f -> appendOutput output f
+          ToStdout -> hAppendOutput output stdout
 
         exitCode <- waitForProcess p
           
@@ -57,15 +58,18 @@ bash cmd = do
           ExitSuccess   -> return strictOutput
           ExitFailure _ -> throwA $ T.pack strictOutput
   where
-    appendOutput :: Text -> FilePath -> String -> IO ()
-    appendOutput cmd path s = do
-      withFile path AppendMode $ \h -> do
+    appendOutput :: String -> FilePath -> IO ()
+    appendOutput output path = do
+      withFile path AppendMode (hAppendOutput output)
+
+    hAppendOutput :: String -> Handle -> IO ()
+    hAppendOutput output h = do
         -- No buffering for streaming output
         hSetBuffering h NoBuffering
         dir <- getCurrentDirectory
         hPutStr h $ T.unpack $
           "\n\nOutput of '{}' in directory '{}':\n--------------\n\n" %% (cmd, T.pack dir)
-        hPutStr h s
+        hPutStr h output
 
 bashInteractive :: Text -> IO ()
 bashInteractive cmd = do
@@ -123,6 +127,6 @@ silentProjectCommand cmd project =
   where 
     showError :: ActionException -> ActionM ()
     showError (ActionException output) = do
-      printf "Bash command '{}' failed on project '{}'" (cmd, projectName project)
+      printf "\n\nBash command '{}' failed on project '{}'" (cmd, projectName project)
       liftIO $ showOutput output
       throwA ""

@@ -29,8 +29,7 @@ maven cmd project = do
 
 version :: Project -> Action
 version project = do
-  pom <- readXML (projectPath project ++ "/pom.xml")
-  -- TODO
+  pom <- readPOM project
   let vs = map value $ elementsAt ["project", "version"] pom
   case vs of
     []  -> throwA "Couldn't find /project/version"
@@ -39,8 +38,7 @@ version project = do
 
 properties :: Project -> Action
 properties project = do
-  pom <- readXML (projectPath project ++ "/pom.xml")
-  -- TODO
+  pom <- readPOM project
   let es = elementsAt (T.words "project properties") pom
       ps = concatMap X.elChildren es
       vs = map (T.pack . X.qName . X.elName &&& value) ps
@@ -48,3 +46,11 @@ properties project = do
   liftIO $ do
     T.putStrLn ""
     mapM_ (\(n,v) -> T.putStrLn . indent 1 $ "{}: {}" %% (n, v)) vs
+
+readPOM :: Project -> ActionM [X.Content]
+readPOM project = do
+  let pom = projectPath project ++ "/pom.xml"
+  pomExists <- liftIO $ doesFileExist pom
+  unless pomExists $
+    throwA $ "pom doesn't exist at '{}'" % T.pack pom
+  readXML pom
