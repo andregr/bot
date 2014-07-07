@@ -3,6 +3,8 @@
 
 module Bot.Types 
   ( Action
+  , ActionM
+  , BashCopyOutput(..)
   , ActionException(..)
   , Project(..)
   , Application(..)
@@ -20,12 +22,17 @@ import Control.Applicative (Applicative, Alternative)
 import Control.Applicative.Free
 import Control.Exception (Exception)
 import Control.Monad.Trans.Except (Except)
-import Control.Monad.Trans.State (StateT)
+import Control.Monad.Trans.State
+import qualified Control.Monad.Trans.Reader as Trans
 import Data.Monoid
 import qualified Data.Text.Lazy as T
 import Data.Typeable (Typeable)
 
-type Action = IO ()
+type Action = Trans.ReaderT BashCopyOutput IO ()
+
+type ActionM = Trans.ReaderT BashCopyOutput IO
+
+data BashCopyOutput = Off | ToFile FilePath
 
 data ActionException = ActionException Text
   deriving (Show, Typeable)

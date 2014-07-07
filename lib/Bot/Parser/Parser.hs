@@ -10,6 +10,7 @@ module Bot.Parser.Parser
   , runParser
   , runParserFully
   , text
+  , constant
   , liftReader
   , catchP
   , throwP
@@ -81,6 +82,9 @@ allRemaining p = whileM (not <$> isEndOfInput) p
 
 text :: Parser Text
 text = consumeOne (Error ["Missing argument"]) Right
+
+constant :: Text -> Parser Text
+constant c = text ? (== c)
 
 path :: Parser FilePath
 path = fmap T.unpack text

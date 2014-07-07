@@ -7,14 +7,15 @@ module Bot.Action.XML
   , children
   ) where
 
+import Control.Monad.IO.Class
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import Text.XML.Light
 
-readXML :: FilePath -> IO [Content]
+readXML :: MonadIO m => FilePath -> m [Content]
 readXML path = do
-  !c <- T.readFile path
+  !c <- liftIO $ T.readFile path
   return $ parseXML c
 
 value :: Element -> Text

@@ -28,6 +28,7 @@ configuration = Configuration commands help
           
       , Command "createBranch" $
           forEachProject2 createBranch <$> arg "branch" text <*> workspaceProjects
+          
       , Command "version" $
           forEachProject version <$> workspaceProjects
 
@@ -46,7 +47,9 @@ configuration = Configuration commands help
       --, "my-app4"
       --, "my-app5"
 
-        "cobranca-api"
+        "financeiro"
+      , "cobranca-api"
+      , "geradorrps"
       , "comercial"
       , "faturamento"
       , "bpa-comercial"

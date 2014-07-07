@@ -9,24 +9,25 @@ import Bot.Action.Action
 import Bot.Types
 import Bot.Util
 import Control.Applicative
-import Control.Exception
+import Control.Monad.Catch
+import Control.Monad.IO.Class
 import Data.List
 import Data.Maybe
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 
-createBranch :: Text -> Project -> IO ()
+createBranch :: Text -> Project -> Action
 createBranch branch project = silentProjectCommand ("git checkout HEAD -b {}" % branch) project
 
-status :: Project -> IO ()
+status :: Project -> Action
 status project = do
     branch <- currentBranch project
     changes <- changeCount project
     maybeDivergence <- divergence project
-    T.putStrLn $ commas $ catMaybes [ formatBranch branch
-                                    , formatChangeCount changes
-                                    , formatDivergence maybeDivergence
-                                    ]
+    liftIO $ T.putStrLn $ commas $ catMaybes [ formatBranch branch
+                                             , formatChangeCount changes
+                                             , formatDivergence maybeDivergence
+                                             ]
   where
     formatBranch b = Just $ T.pack b
     
@@ -41,10 +42,10 @@ status project = do
     formatDivergence (Just (ahead,behind)) = Just $
       "diverged ({} ahead, {} behind" %% (show ahead, show behind)
 
-changeCount :: Project -> IO Int
+changeCount :: Project -> ActionM Int
 changeCount p = cd (projectPath p) $ (length . lines) <$> bash "git status --porcelain"
 
-divergence :: Project -> IO (Maybe (Int, Int))
+divergence :: Project -> ActionM (Maybe (Int, Int))
 divergence p = cd (projectPath p) $ do
   do
     a <- (length . lines) <$> bash "git rev-list HEAD@{upstream}..HEAD"
@@ -52,14 +53,14 @@ divergence p = cd (projectPath p) $ do
     return $ Just (a,b)
   `catch`
     \(e@(ActionException output)) -> do
-      if "No upstream configured" `T.isInfixOf` output then return Nothing else throwIO e
+      if "No upstream configured" `T.isInfixOf` output then return Nothing else throwM e
 
-currentBranch :: Project -> IO String
+currentBranch :: Project -> ActionM String
 currentBranch p = cd (projectPath p) $ do
     branches <- bash "git branch"
     case parseCurrentBranch branches of
       Just b  -> return b
-      Nothing -> throwIO $ ActionException $ "Unexpected branches: {}" % T.pack branches
+      Nothing -> throwA $ "Unexpected branches: {}" % T.pack branches
   where
     parseCurrentBranch = current . filter ("* " `isPrefixOf`) . lines
       where

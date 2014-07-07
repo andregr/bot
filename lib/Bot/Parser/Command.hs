@@ -15,7 +15,7 @@ import qualified Data.Text.Lazy as T
 commandParser :: [Command a] -> Parser (Command a)
 commandParser commands = do
     let readCommandName = T.tail <$> text ? ("-" `T.isPrefixOf`)
-    name <- readCommandName `onExceptP` "Missing command"
+    name <- readCommandName `onExceptP` "Expected command (starting with '-')"
     case lookup name commandMap of
       Nothing -> throwP $ Error [unknownCommandMsg name]
       Just c  -> return c
