@@ -8,6 +8,7 @@ module Bot.Action.Action
   , forEachProject
   , forEachProject2
   , silentProjectCommand
+  , bashAction
   ) where
 
 import Bot.Types
@@ -71,8 +72,8 @@ bash cmd = do
           "\n\nOutput of '{}' in directory '{}':\n--------------\n\n" %% (cmd, T.pack dir)
         hPutStr h output
 
-bashInteractive :: Text -> IO ()
-bashInteractive cmd = do
+bashInteractive :: MonadIO m => Text -> m ()
+bashInteractive cmd = liftIO $ do
     (_, _, _, p) <- createProcess (shell (T.unpack cmd)) 
                                      { close_fds = False }
     exitCode <- waitForProcess p
@@ -89,14 +90,14 @@ cd new f = do
   let changeDir p = liftIO $ setCurrentDirectory p
   bracket (changeDir new) (const $ changeDir old) (const f)
 
-showOutput :: Text -> IO ()
+showOutput :: MonadIO m => Text -> m ()
 showOutput c
     | length (T.lines c) <= 10 = showSimple
     | otherwise                = showPaged
   where
-    showSimple = putStrLn (T.unpack c)
+    showSimple = liftIO $ putStrLn (T.unpack c)
     
-    showPaged = do
+    showPaged = liftIO $ do
       putStr "View output? [Y/n] "
       hFlush stdout
       line <- getLine
@@ -117,7 +118,7 @@ forEachProject2 action arg1 projects = forM_ projects $ \project -> do
 
 putProjectName :: Project -> ActionM ()
 putProjectName p = liftIO $ do
-  T.putStr (leftAlign 20 $ projectName p <> ":  ")
+  T.putStr (leftAlign 30 $ projectName p <> ":  ")
   hFlush stdout
 
 silentProjectCommand :: Text -> Project -> Action
@@ -130,3 +131,11 @@ silentProjectCommand cmd project =
       printf "\n\nBash command '{}' failed on project '{}'" (cmd, projectName project)
       liftIO $ showOutput output
       throwA ""
+
+bashAction :: Text -> Project -> Action
+bashAction cmd project =
+  cd (projectPath project) $ do
+    output <- bash cmd
+    liftIO $ do
+      putStr "\n\n"
+      putStrLn output

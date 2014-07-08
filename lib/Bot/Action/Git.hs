@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Bot.Action.Git
-  ( createBranch
+  ( git
+  , createBranch
   , status
   ) where
 
@@ -15,6 +16,9 @@ import Data.List
 import Data.Maybe
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
+
+git :: Text -> Project -> Action
+git cmd project = silentProjectCommand ("git {}" % cmd) project
 
 createBranch :: Text -> Project -> Action
 createBranch branch project = silentProjectCommand ("git checkout HEAD -b {}" % branch) project
@@ -40,7 +44,7 @@ status project = do
     formatDivergence (Just (ahead,0)) = Just $ "{} ahead" % (T.pack . show) ahead
     formatDivergence (Just (0,behind)) = Just $ "{} behind" % (T.pack . show) behind
     formatDivergence (Just (ahead,behind)) = Just $
-      "diverged ({} ahead, {} behind" %% (show ahead, show behind)
+      "diverged ({} ahead, {} behind)" %% (show ahead, show behind)
 
 changeCount :: Project -> ActionM Int
 changeCount p = cd (projectPath p) $ (length . lines) <$> bash "git status --porcelain"

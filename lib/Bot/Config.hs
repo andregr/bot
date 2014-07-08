@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Bot.Config where
+module Bot.Config
+  ( defaultConfiguration
+  , configurations
+  ) where
 
 import Bot.Action.Action
 import Bot.Action.Git
@@ -10,6 +13,7 @@ import Bot.Parser.Project
 import Bot.Types
 import Bot.Util
 import Control.Applicative
+import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
 
 defaultConfiguration :: Configuration
@@ -17,26 +21,41 @@ defaultConfiguration = configurations !! 0
 
 configurations :: [Configuration]
 configurations = [ makeConfiguration "real" realWorkspace
-                 , makeConfiguration "test" testWorkspace
+                 , makeConfiguration "releaser" releaserWorkspace
+                 , makeConfiguration "tiss" tissWorkspace
+                 , makeConfiguration "test" testWorkspace                   
                  ]
 
 makeConfiguration :: Text -> [Project] -> Configuration
 makeConfiguration name projects = Configuration name commands help
   where
     commands =
-      [ Command "clean" $
+      [ Command "configure" $
+            pure configure
+
+      , Command "reinstall" $
             forEachProject2 maven
-            <$> pure "clean"
+            <$> pure "-DskipTests=true clean install"
             <*> workspaceProjects
           
       , Command "install" $
             forEachProject2 maven
-            <$> pure "install"
+            <$> pure "-DskipTests=true install"
             <*> workspaceProjects
           
       , Command "status" $
             forEachProject status
             <$> workspaceProjects
+
+      , Command "fetch" $
+            forEachProject2 git
+            <$> pure "fetch"
+            <*> workspaceProjects
+
+      , Command "pull" $
+            forEachProject2 git
+            <$> pure "pull"
+            <*> workspaceProjects
           
       , Command "createBranch" $
             forEachProject2 createBranch
@@ -50,6 +69,11 @@ makeConfiguration name projects = Configuration name commands help
       , Command "properties" $
             forEachProject properties
             <$> workspaceProjects
+
+      , Command "bash" $
+            forEachProject2 bashAction
+            <$> arg "command" text
+            <*> workspaceProjects
       ]
     
     workspaceProjects = arg "projects" $ projectsParser projects
@@ -67,13 +91,38 @@ realWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [
-        "financeiro"
+      [ "financeiro"
       , "cobranca-api"
       , "geradorrps"
       , "comercial"
       , "faturamento"
       , "bpa-comercial"
+      , "autorizacao"
+      , "velab-comercial"
+      , "tiss-comercial"
+      , "comercial-lis"
+      ]
+
+tissWorkspace :: [Project]
+tissWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace"
+    projects = map (wsProject workspace)
+      [ "touch-protocol"
+      , "integracao-comercial"
+      , "comercial"
+      , "faturamento"
+      ]
+
+releaserWorkspace :: [Project]
+releaserWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace/releaser/test/releaser_workspace"
+    projects = map (wsProject workspace)
+      [ "release-test-root"
+      , "release-test-alpha"
+      , "release-test-beta"
+      , "release-test-charlie"
       ]
 
 testWorkspace :: [Project]
@@ -81,8 +130,7 @@ testWorkspace = projects
   where
     workspace = "/Users/andre/Code/bot/test/data"
     projects = map (wsProject workspace)
-      [
-        "my-app"
+      [ "my-app"
       , "my-app2"
       , "my-app3"
       , "my-app4"
@@ -91,3 +139,11 @@ testWorkspace = projects
 
 wsProject :: FilePath -> Text -> Project
 wsProject ws name = Project name (ws ++ "/" ++ T.unpack name)
+
+configure :: Action
+configure = do
+  let bot = "/home/andregr/Code/bot"
+  bashInteractive $ "emacs {}/lib/Bot/Config.hs" % bot
+  liftIO $ putStrLn "Recompiling"
+  output <- bash $ "cd {} && /home/andregr/.cabal/bin/cabal install" % bot
+  liftIO $ putStrLn output
