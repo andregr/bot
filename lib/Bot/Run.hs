@@ -36,17 +36,24 @@ run argStrings = do
       exitFailure
   where
     args = fmap T.pack argStrings
-    printHelp = T.putStr $ T.unlines $
-                   [ "Usage: bot [--help] [--config NAME] " <>
-                     "[--show-command-output | --pipe-commands-to FILENAME] COMMAND" ]
-                ++ [ "where " ]
+    printHelp = T.putStrLn $ T.intercalate "\n" $
+                   [ "Usage:" ]
                 ++ [ "" ]
-                ++ [ allConfigsHelp ]
+                ++ [ indent 1 $ "bot [--help] [--config NAME] " <>
+                     "[--show-command-output | --pipe-commands-to FILENAME] COMMAND" ]
+                ++ [ "" ]
+                ++ [ "where" ]
+                ++ [ "" ]
+                ++ allConfigsHelp
 
-allConfigsHelp :: Text
-allConfigsHelp = T.unlines $
-  map (\c -> "Configuration '{}':\n---------\n\n{}\n" %%
-     (configName c, configHelp c)) configurations
+allConfigsHelp :: Help
+allConfigsHelp = concatMap oneConfigHelp configurations
+  where
+    oneConfigHelp c =    [ "Configuration '{}':" % configName c ]
+                      ++ [ "---------------" ]
+                      ++ [ "" ]
+                      ++ fmap (indent 1) (configHelp c)
+                      ++ [ "" ]
 
 data Execution = ShowHelp
                | RunAction BashCopyOutput Configuration (Text, Action)

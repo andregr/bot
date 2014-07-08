@@ -15,6 +15,7 @@ module Bot.Types
   , Parser(..)
   , Error(..)
   , ShowHelp(..)
+  , Help
   ) where
 
 import Bot.Util
@@ -53,7 +54,7 @@ data Application a = Application
 data Configuration = Configuration
   { configName :: Text
   , configCommands :: [Command Action]
-  , configHelp :: Text
+  , configHelp :: Help
   }
 
 {-
@@ -78,8 +79,10 @@ not for Args themselves, which contain Parsers. This means that optional argumen
 for example, can be implemented using the Alternative functions on Parsers.
 -}
 
+type Help = [Text]
+
 class ShowHelp a where
-  showHelp :: a -> Text
+  showHelp :: a -> [Text]
 
 data Command a = Command
   { commandName :: Text
@@ -87,7 +90,7 @@ data Command a = Command
   }
 
 instance ShowHelp (Command a) where
-  showHelp c = "-" <> commandName c <> " " <> showReader (applyCommand c)
+  showHelp c = ["-" <> commandName c <> " " <> showReader (applyCommand c)]
 
 type Reader = Ap Arg
 
