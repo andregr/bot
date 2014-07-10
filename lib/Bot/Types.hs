@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 {-# LANGUAGE DeriveFunctor, DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Bot.Types 
   ( Action
   , ActionM
+  , Options(..)
   , BashCopyOutput(..)
   , ActionException(..)
   , Project(..)
@@ -29,9 +30,13 @@ import Data.Monoid
 import qualified Data.Text.Lazy as T
 import Data.Typeable (Typeable)
 
-type Action = Trans.ReaderT BashCopyOutput IO ()
+type Action = Trans.ReaderT Options IO ()
 
-type ActionM = Trans.ReaderT BashCopyOutput IO
+type ActionM = Trans.ReaderT Options IO
+
+data Options = Options
+  { optBashCopyOutput :: BashCopyOutput
+  }
 
 data BashCopyOutput = Off | ToStdout | ToFile FilePath
 

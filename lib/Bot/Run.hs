@@ -39,8 +39,13 @@ run argStrings = do
     printHelp = T.putStrLn $ T.intercalate "\n" $
                    [ "Usage:" ]
                 ++ [ "" ]
-                ++ [ indent 1 $ "bot [--help] [--config NAME] " <>
-                     "[--show-command-output | --pipe-commands-to FILENAME] COMMAND" ]
+                ++ [ indent 1
+                      $  "bot "
+                      <> "[--help] "
+                      <> "[--config NAME] "
+                      <> "[--show-command-output | --pipe-commands-to FILENAME] "
+                      <> "COMMAND"
+                   ]
                 ++ [ "" ]
                 ++ [ "where" ]
                 ++ [ "" ]
@@ -56,13 +61,13 @@ allConfigsHelp = concatMap oneConfigHelp configurations
                       ++ [ "" ]
 
 data Execution = ShowHelp
-               | RunAction BashCopyOutput Configuration (Text, Action)
+               | RunAction Options Configuration (Text, Action)
 
 parseExecution :: [Text] -> IO Execution
 parseExecution args = do
   let maybeAction = runParserFully executionParser args
   case maybeAction of
-    Left e  -> putStrLn (show e) >> exitFailure
+    Left e  -> print e >> exitFailure
     Right a -> return a
 
 executionParser :: Parser Execution
@@ -74,22 +79,25 @@ executionParser = do
     Nothing -> do
       config <- configurationParser
       let commands = configCommands config
-      RunAction <$> bashCopyOutputParser <*> pure config <*> actionParser commands
+      RunAction <$> optionsParser <*> pure config <*> actionParser commands
 
 configurationParser :: Parser Configuration
 configurationParser = do
     maybeName <- fmap Just ((,) <$> constant "--config" <*> text) <|> pure Nothing
     case maybeName of
       Just (_, name) -> lookupConfig name
-      Nothing        -> return $ defaultConfiguration
+      Nothing        -> lookupConfig defaultConfiguration
   where
     configsByName = map (configName &&& id) configurations
     lookupConfig n = case lookup n configsByName of
       Just c  -> return c
       Nothing -> throwP $ Error [ "Unknown configuration '{}'" % n ]
 
+optionsParser :: Parser Options
+optionsParser = Options <$> bashCopyOutputParser
+
 bashCopyOutputParser :: Parser BashCopyOutput
-bashCopyOutputParser = do
+bashCopyOutputParser =
       (const ToStdout <$> constant "--show-command-output")
   <|> (const ToFile <$> constant "--pipe-commands-to" <*> path)
   <|> pure Off

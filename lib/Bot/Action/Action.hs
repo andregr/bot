@@ -30,10 +30,10 @@ import System.Process
 throwA :: (MonadMask m) => Text -> m a
 throwA = throwM . ActionException
 
-bash :: (MonadIO m, MonadReader m, EnvType m ~ BashCopyOutput) =>
+bash :: (MonadIO m, MonadReader m, EnvType m ~ Options) =>
         Text -> m String
 bash cmd = do
-    copyOutput <- ask
+    copyOutput <- asks optBashCopyOutput
     liftIO $ do
       (readfd, writefd) <- createPipe
       writeh <- fdToHandle writefd

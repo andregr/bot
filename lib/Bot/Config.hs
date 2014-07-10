@@ -16,8 +16,8 @@ import Control.Applicative
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
 
-defaultConfiguration :: Configuration
-defaultConfiguration = configurations !! 0
+defaultConfiguration :: Text
+defaultConfiguration = "tiss"
 
 configurations :: [Configuration]
 configurations = [ makeConfiguration "real" realWorkspace
@@ -112,6 +112,7 @@ tissWorkspace = projects
       , "integracao-comercial"
       , "comercial"
       , "faturamento"
+      , "comercial-lis"
       ]
 
 releaserWorkspace :: [Project]
