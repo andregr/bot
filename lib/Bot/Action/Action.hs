@@ -54,7 +54,7 @@ bash cmd = do
           
         -- Avoid lazy IO
         !strictOutput <- return output
-          
+
         case exitCode of
           ExitSuccess   -> return strictOutput
           ExitFailure _ -> throwA $ T.pack strictOutput
@@ -127,10 +127,10 @@ silentProjectCommand cmd project =
       (bash cmd >> return ()) `catch` showError
   where 
     showError :: ActionException -> ActionM ()
-    showError (ActionException output) = do
-      printf "\n\nBash command '{}' failed on project '{}'" (cmd, projectName project)
+    showError (e@(ActionException output)) = do
+      printf "\n\nBash command '{}' failed on project '{}'. Output:" (cmd, projectName project)
       liftIO $ showOutput output
-      throwA ""
+      throwM e
 
 bashAction :: Text -> Project -> Action
 bashAction cmd project =

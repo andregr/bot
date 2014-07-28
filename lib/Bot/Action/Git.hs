@@ -4,16 +4,20 @@ module Bot.Action.Git
   ( git
   , createBranch
   , status
+  , nuke
+  , deleteBranches
   ) where
 
 import Bot.Action.Action
 import Bot.Types
 import Bot.Util
 import Control.Applicative
+import Control.Monad (void)
 import Control.Monad.Catch
 import Control.Monad.IO.Class
 import Data.List
 import Data.Maybe
+import Data.Monoid
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 
@@ -45,6 +49,22 @@ status project = do
     formatDivergence (Just (0,behind)) = Just $ "{} behind" % (T.pack . show) behind
     formatDivergence (Just (ahead,behind)) = Just $
       "diverged ({} ahead, {} behind)" %% (show ahead, show behind)
+
+deleteBranches :: Project -> Action
+deleteBranches project = cd (projectPath project) $ do
+    void $ bash "git branch | sed '/*/d' | xargs git branch -D"
+  `catch`
+    \(e@(ActionException output)) -> do
+      -- Ignore error if only branch is master
+      if "branch name required" `T.isInfixOf` output
+        then return ()
+        else throwM e
+
+nuke :: Project -> Action
+nuke project = cd (projectPath project) $ do
+  void $ bash $ "git add -A . && git stash save && git fetch" <>
+                " && git checkout master; git reset --hard origin/master"
+  deleteBranches project
 
 changeCount :: Project -> ActionM Int
 changeCount p = cd (projectPath p) $ (length . lines) <$> bash "git status --porcelain"

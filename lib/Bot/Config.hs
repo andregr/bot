@@ -17,7 +17,7 @@ import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
 
 defaultConfiguration :: Text
-defaultConfiguration = "tiss"
+defaultConfiguration = "real"
 
 configurations :: [Configuration]
 configurations = [ makeConfiguration "real" realWorkspace
@@ -51,6 +51,14 @@ makeConfiguration name projects = Configuration name commands help
             forEachProject2 git
             <$> pure "fetch"
             <*> workspaceProjects
+
+      , Command "deleteBranches" $
+            forEachProject deleteBranches
+            <$> workspaceProjects
+
+      , Command "nuke" $
+            forEachProject nuke
+            <$> workspaceProjects
 
       , Command "pull" $
             forEachProject2 git
