@@ -22,12 +22,16 @@ run :: [String] -> IO ()
 run argStrings = do
     hSetBuffering stdout NoBuffering
   
-    when (null args) $ printHelp >> exitFailure
-    
-    execution <- parseExecution args
-    (options, _, (cmd, action)) <- case execution of
-      ShowHelp              -> printHelp >> exitSuccess
-      RunAction options c a -> return (options, c, a)
+    defaultConfigName <- defaultConfiguration
+    let maybeDefaultConfig = lookup defaultConfigName configsByName
+
+    when (null args) $ printHelp maybeDefaultConfig >> exitFailure
+
+    execution <- parseExecution defaultConfigName args
+    (options, (cmd, action)) <- case execution of
+      ShowHelp              ->
+        printHelp maybeDefaultConfig >> exitSuccess
+      RunAction options _ a -> return (options, a)
       
     runReaderT action options `catch` \(ActionException e) -> do
       if T.null e
@@ -36,7 +40,7 @@ run argStrings = do
       exitFailure
   where
     args = fmap T.pack argStrings
-    printHelp = T.putStrLn $ T.intercalate "\n" $
+    printHelp maybeConfig = T.putStrLn $ T.intercalate "\n" $
                    [ "Usage:" ]
                 ++ [ "" ]
                 ++ [ indent 1
@@ -49,49 +53,56 @@ run argStrings = do
                 ++ [ "" ]
                 ++ [ "where" ]
                 ++ [ "" ]
-                ++ allConfigsHelp
+                ++ configsHelp maybeConfig
+
+configsHelp :: Maybe Configuration -> Help
+configsHelp Nothing = allConfigsHelp
+configsHelp (Just config) = oneConfigHelp config
 
 allConfigsHelp :: Help
 allConfigsHelp = concatMap oneConfigHelp configurations
-  where
-    oneConfigHelp c =    [ "Configuration '{}':" % configName c ]
-                      ++ [ "---------------" ]
-                      ++ [ "" ]
-                      ++ fmap (indent 1) (configHelp c)
-                      ++ [ "" ]
+
+oneConfigHelp :: Configuration -> Help
+oneConfigHelp c =    [ "Configuration '{}':" % configName c ]
+                  ++ [ "---------------" ]
+                  ++ [ "" ]
+                  ++ fmap (indent 1) (configHelp c)
+                  ++ [ "" ]
 
 data Execution = ShowHelp
                | RunAction Options Configuration (Text, Action)
 
-parseExecution :: [Text] -> IO Execution
-parseExecution args = do
-  let maybeAction = runParserFully executionParser args
+parseExecution :: Text -> [Text] -> IO Execution
+parseExecution defaultConfig args = do
+  let maybeAction = runParserFully (executionParser defaultConfig) args
   case maybeAction of
     Left e  -> print e >> exitFailure
     Right a -> return a
 
-executionParser :: Parser Execution
-executionParser = do
+executionParser :: Text -> Parser Execution
+executionParser defaultConfig = do
   let helpParser = fmap Just (constant "-h" <|> constant "--help") <|> pure Nothing
   help <- helpParser
   case help of
     Just _  -> return ShowHelp
     Nothing -> do
-      config <- configurationParser
+      config <- configurationParser defaultConfig
       let commands = configCommands config
       RunAction <$> optionsParser <*> pure config <*> actionParser commands
 
-configurationParser :: Parser Configuration
-configurationParser = do
+configurationParser :: Text -> Parser Configuration
+configurationParser defaultConfig = do
     maybeName <- fmap Just ((,) <$> constant "--config" <*> text) <|> pure Nothing
     case maybeName of
       Just (_, name) -> lookupConfig name
-      Nothing        -> lookupConfig defaultConfiguration
+      Nothing        -> lookupConfig defaultConfig
   where
-    configsByName = map (configName &&& id) configurations
     lookupConfig n = case lookup n configsByName of
       Just c  -> return c
       Nothing -> throwP $ Error [ "Unknown configuration '{}'" % n ]
+
+configsByName :: [(Text, Configuration)]
+configsByName = map (configName &&& id) configurations
 
 optionsParser :: Parser Options
 optionsParser = Options <$> bashCopyOutputParser

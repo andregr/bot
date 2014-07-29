@@ -15,9 +15,18 @@ import Bot.Util
 import Control.Applicative
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
+import qualified Data.Text.IO as T -- strict IO to avoid locks from multiple calls
+import System.Directory
 
-defaultConfiguration :: Text
-defaultConfiguration = "real"
+defaultConfigFile :: FilePath
+defaultConfigFile = "/home/andregr/.botDefaultConfig"
+
+defaultConfiguration :: IO Text
+defaultConfiguration = do
+  fileExists <- doesFileExist defaultConfigFile
+  if fileExists
+    then head . T.lines . T.fromStrict<$> T.readFile defaultConfigFile
+    else return (configName . head $ configurations)
 
 configurations :: [Configuration]
 configurations = [ makeConfiguration "real" realWorkspace
@@ -32,6 +41,10 @@ makeConfiguration name projects = Configuration name commands help
     commands =
       [ Command "configure" $
             pure configure
+
+      , Command "changeConfig" $
+            changeConfig
+            <$> arg "config" text
 
       , Command "reinstall" $
             forEachProject2 maven
@@ -155,4 +168,7 @@ configure = do
   bashInteractive $ "emacs {}/lib/Bot/Config.hs" % bot
   liftIO $ putStrLn "Recompiling"
   output <- bash $ "cd {} && /home/andregr/.cabal/bin/cabal install" % bot
-  liftIO $ putStrLn output
+  liftIO $ putStrLn output  
+
+changeConfig :: Text -> Action
+changeConfig config = liftIO $ T.writeFile defaultConfigFile $ T.toStrict config
