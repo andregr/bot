@@ -25,11 +25,11 @@ run argStrings = do
     when (null args) $ printHelp >> exitFailure
     
     execution <- parseExecution args
-    (copyBashOutput, _, (cmd, action)) <- case execution of
-      ShowHelp                     -> printHelp >> exitSuccess
-      RunAction copyBashOutput c a -> return (copyBashOutput, c, a)
+    (options, _, (cmd, action)) <- case execution of
+      ShowHelp              -> printHelp >> exitSuccess
+      RunAction options c a -> return (options, c, a)
       
-    runReaderT action copyBashOutput `catch` \(ActionException e) -> do
+    runReaderT action options `catch` \(ActionException e) -> do
       if T.null e
          then printf "\n\nCommand '{}' failed" (Only cmd)
          else printf "\n\nCommand '{}' failed:\n{}" (cmd, e)
