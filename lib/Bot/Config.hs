@@ -46,9 +46,9 @@ makeConfiguration name projects = Configuration name commands help
             changeConfig
             <$> arg "config" text
 
-      , Command "reinstall" $
+      , Command "reinstalla" $
             forEachProject2 maven
-            <$> pure "-DskipTests=true clean install"
+            <$> pure "-DskipTests=true clean install > /home/andregr/Desktop/log"
             <*> workspaceProjects
           
       , Command "install" $
@@ -167,7 +167,7 @@ configure = do
   let bot = "/home/andregr/Code/bot"
   bashInteractive $ "emacs {}/lib/Bot/Config.hs" % bot
   liftIO $ putStrLn "Recompiling"
-  output <- bash $ "cd {} && /home/andregr/.cabal/bin/cabal install" % bot
+  output <- bash $ "cd {} && /home/andregr/.cabal/bin/cabal build" % bot
   liftIO $ putStrLn output  
 
 changeConfig :: Text -> Action
