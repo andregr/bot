@@ -13,6 +13,7 @@ module Bot.Action.Action
 
 import Bot.Types
 import Bot.Util
+import Control.Applicative
 import Control.Monad (unless, when, forM_)
 import Control.Monad.Catch
 import Control.Monad.IO.Class
@@ -20,6 +21,7 @@ import Control.Monad.Reader.Class
 import Data.Monoid
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text.IO as ST
 import System.Directory
 import System.Exit
 import System.IO
@@ -31,7 +33,7 @@ throwA :: (MonadMask m) => Text -> m a
 throwA = throwM . ActionException
 
 bash :: (MonadIO m, MonadReader m, EnvType m ~ Options) =>
-        Text -> m String
+        Text -> m Text
 bash cmd = do
     copyOutput <- asks optBashCopyOutput
     liftIO $ do
@@ -44,33 +46,44 @@ bash cmd = do
                                              , close_fds = False
                                              }
       bracket (fdToHandle readfd) hClose $ \h -> do
-        output <- hGetContents h
+        {-
+        The output needs to be read strictly for two reasons:
+
+        1. Avoid stuck processes due to clogged pipes
+
+          If copyOutput is Off and the caller function doesn't use the
+          process output waitForProcess gets stuck due to a clogged pipe:
+          the process is waiting for its output to be read before continuing
+          but it never is.
+
+        2. Make sure the process is over when this function returns
+        -}
+        strictOutput <- T.fromStrict <$> ST.hGetContents h
         case copyOutput of
           Off      -> return ()
-          ToFile f -> appendOutput output f
-          ToStdout -> hAppendOutput output stdout
+          ToFile f -> appendOutput strictOutput f
+          ToStdout -> hAppendOutput strictOutput stdout
 
+        T.putStrLn $ "Command start: {}" % cmd
         exitCode <- waitForProcess p
+        T.putStrLn $ "Command end: {}" % cmd
           
-        -- Avoid lazy IO
-        !strictOutput <- return output
-
         case exitCode of
           ExitSuccess   -> return strictOutput
-          ExitFailure _ -> throwA $ T.pack strictOutput
+          ExitFailure _ -> throwA strictOutput
   where
-    appendOutput :: String -> FilePath -> IO ()
+    appendOutput :: Text -> FilePath -> IO ()
     appendOutput output path = do
       withFile path AppendMode (hAppendOutput output)
 
-    hAppendOutput :: String -> Handle -> IO ()
+    hAppendOutput :: Text -> Handle -> IO ()
     hAppendOutput output h = do
         -- No buffering for streaming output
         hSetBuffering h NoBuffering
         dir <- getCurrentDirectory
         hPutStr h $ T.unpack $
           "\n\nOutput of '{}' in directory '{}':\n--------------\n\n" %% (cmd, T.pack dir)
-        hPutStr h output
+        T.hPutStr h output
 
 bashInteractive :: MonadIO m => Text -> m ()
 bashInteractive cmd = liftIO $ do
@@ -138,4 +151,4 @@ bashAction cmd project =
     output <- bash cmd
     liftIO $ do
       putStr "\n\n"
-      putStrLn output
+      T.putStrLn output

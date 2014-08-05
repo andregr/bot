@@ -13,9 +13,11 @@ import Bot.Parser.Project
 import Bot.Types
 import Bot.Util
 import Control.Applicative
+import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
-import qualified Data.Text.IO as T -- strict IO to avoid locks from multiple calls
+import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text.IO as ST -- strict IO to avoid locks from multiple calls
 import System.Directory
 
 defaultConfigFile :: FilePath
@@ -25,7 +27,7 @@ defaultConfiguration :: IO Text
 defaultConfiguration = do
   fileExists <- doesFileExist defaultConfigFile
   if fileExists
-    then head . T.lines . T.fromStrict<$> T.readFile defaultConfigFile
+    then head . T.lines . T.fromStrict<$> ST.readFile defaultConfigFile
     else return (configName . head $ configurations)
 
 configurations :: [Configuration]
@@ -46,9 +48,9 @@ makeConfiguration name projects = Configuration name commands help
             changeConfig
             <$> arg "config" text
 
-      , Command "reinstalla" $
+      , Command "reinstall" $
             forEachProject2 maven
-            <$> pure "-DskipTests=true clean install > /home/andregr/Desktop/log"
+            <$> pure "-DskipTests=true clean install"
             <*> workspaceProjects
           
       , Command "install" $
@@ -168,7 +170,10 @@ configure = do
   bashInteractive $ "emacs {}/lib/Bot/Config.hs" % bot
   liftIO $ putStrLn "Recompiling"
   output <- bash $ "cd {} && /home/andregr/.cabal/bin/cabal build" % bot
-  liftIO $ putStrLn output  
+  liftIO $ T.putStrLn output  
 
 changeConfig :: Text -> Action
-changeConfig config = liftIO $ T.writeFile defaultConfigFile $ T.toStrict config
+changeConfig config = do
+  unless (config `elem` map configName configurations) $
+    throwA $ "Unknown configuration '{}'" % config
+  liftIO $ ST.writeFile defaultConfigFile $ T.toStrict config

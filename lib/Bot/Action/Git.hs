@@ -15,7 +15,6 @@ import Control.Applicative
 import Control.Monad (void)
 import Control.Monad.Catch
 import Control.Monad.IO.Class
-import Data.List
 import Data.Maybe
 import Data.Monoid
 import qualified Data.Text.Lazy as T
@@ -29,6 +28,7 @@ createBranch branch project = silentProjectCommand ("git checkout HEAD -b {}" % 
 
 status :: Project -> Action
 status project = do
+    void $ bash "git add -A ."
     branch <- currentBranch project
     changes <- changeCount project
     maybeDivergence <- divergence project
@@ -37,7 +37,7 @@ status project = do
                                              , formatDivergence maybeDivergence
                                              ]
   where
-    formatBranch b = Just $ T.pack b
+    formatBranch b = Just b
     
     formatChangeCount 0 = Nothing
     formatChangeCount 1 = Just "1 file changed"
@@ -67,26 +67,26 @@ nuke project = cd (projectPath project) $ do
   deleteBranches project
 
 changeCount :: Project -> ActionM Int
-changeCount p = cd (projectPath p) $ (length . lines) <$> bash "git status --porcelain"
+changeCount p = cd (projectPath p) $ (length . T.lines) <$> bash "git status --porcelain"
 
 divergence :: Project -> ActionM (Maybe (Int, Int))
 divergence p = cd (projectPath p) $ do
   do
-    a <- (length . lines) <$> bash "git rev-list HEAD@{upstream}..HEAD"
-    b <- (length . lines) <$> bash "git rev-list HEAD..HEAD@{upstream}"
+    a <- (length . T.lines) <$> bash "git rev-list HEAD@{upstream}..HEAD"
+    b <- (length . T.lines) <$> bash "git rev-list HEAD..HEAD@{upstream}"
     return $ Just (a,b)
   `catch`
     \(e@(ActionException output)) -> do
       if "No upstream configured" `T.isInfixOf` output then return Nothing else throwM e
 
-currentBranch :: Project -> ActionM String
+currentBranch :: Project -> ActionM Text
 currentBranch p = cd (projectPath p) $ do
     branches <- bash "git branch"
     case parseCurrentBranch branches of
       Just b  -> return b
-      Nothing -> throwA $ "Unexpected branches: {}" % T.pack branches
+      Nothing -> throwA $ "Unexpected branches: {}" % branches
   where
-    parseCurrentBranch = current . filter ("* " `isPrefixOf`) . lines
+    parseCurrentBranch = current . filter ("* " `T.isPrefixOf`) . T.lines
       where
-        current ['*':' ':b] = Just b
-        current _           = Nothing    
+        current [s] = Just $ T.replace "* " "" s
+        current _   = Nothing    
