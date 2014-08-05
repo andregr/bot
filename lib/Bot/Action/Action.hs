@@ -64,9 +64,7 @@ bash cmd = do
           ToFile f -> appendOutput strictOutput f
           ToStdout -> hAppendOutput strictOutput stdout
 
-        T.putStrLn $ "Command start: {}" % cmd
         exitCode <- waitForProcess p
-        T.putStrLn $ "Command end: {}" % cmd
           
         case exitCode of
           ExitSuccess   -> return strictOutput
