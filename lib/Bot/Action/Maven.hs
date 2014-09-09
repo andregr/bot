@@ -36,12 +36,13 @@ version project = do
     [v] -> liftIO $ T.putStrLn v
     _   -> throwA "Found multiple /project/version"
 
-properties :: Project -> Action
-properties project = do
+properties :: Project -> Maybe ((Text, Text) -> Bool) -> Action
+properties project mf = do
   pom <- readPOM project
-  let es = elementsAt (T.words "project properties") pom
+  let f = maybe (const True) id mf
+      es = elementsAt (T.words "project properties") pom
       ps = concatMap X.elChildren es
-      vs = map (T.pack . X.qName . X.elName &&& value) ps
+      vs = filter f $ map (T.pack . X.qName . X.elName &&& value) ps
       
   liftIO $ do
     T.putStrLn ""

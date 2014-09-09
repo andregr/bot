@@ -31,15 +31,18 @@ defaultConfiguration = do
     else return (configName . head $ configurations)
 
 configurations :: [Configuration]
-configurations = [ makeConfiguration "real" realWorkspace
+configurations = [ makeConfiguration "com" comWorkspace
+                 , makeConfiguration "gen" genWorkspace
                  , makeConfiguration "releaser" releaserWorkspace
-                 , makeConfiguration "tiss" tissWorkspace
-                 , makeConfiguration "test" testWorkspace                   
+                 , makeConfiguration "tproc" tprocWorkspace
+                 , makeConfiguration "test" testWorkspace
+                 , makeConfiguration "tprop" tpropWorkspace
                  ]
 
 makeConfiguration :: Text -> [Project] -> Configuration
 makeConfiguration name projects = Configuration name commands help
   where
+    gitOk c p = git c p >> (liftIO $ T.putStrLn "ok")
     commands =
       [ Command "configure" $
             pure configure
@@ -63,20 +66,19 @@ makeConfiguration name projects = Configuration name commands help
             <$> workspaceProjects
 
       , Command "fetch" $
-            forEachProject2 git
-            <$> pure "fetch"
-            <*> workspaceProjects
+            forEachProject fetch
+            <$> workspaceProjects
 
       , Command "deleteBranches" $
             forEachProject deleteBranches
             <$> workspaceProjects
 
       , Command "nuke" $
-            forEachProject nuke
+            forEachProject (\p -> nuke p >> (liftIO $ T.putStrLn "ok"))
             <$> workspaceProjects
 
       , Command "pull" $
-            forEachProject2 git
+            forEachProject2 gitOk
             <$> pure "pull"
             <*> workspaceProjects
           
@@ -90,8 +92,9 @@ makeConfiguration name projects = Configuration name commands help
             <$> workspaceProjects
 
       , Command "properties" $
-            forEachProject properties
+            forEachProject2' properties
             <$> workspaceProjects
+            <*> arg "[matching]" maybeGrepPropertyParser
 
       , Command "bash" $
             forEachProject2 bashAction
@@ -109,8 +112,8 @@ makeConfiguration name projects = Configuration name commands help
            ++ [ "" ]
            ++ map (indent 1 . projectName) projects
 
-realWorkspace :: [Project]
-realWorkspace = projects
+comWorkspace :: [Project]
+comWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
@@ -126,8 +129,22 @@ realWorkspace = projects
       , "comercial-lis"
       ]
 
-tissWorkspace :: [Project]
-tissWorkspace = projects
+genWorkspace :: [Project]
+genWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace"
+    projects = map (wsProject workspace)
+      [ "comercial"
+      , "faturamento"
+      , "velab-comercial"
+      , "atendimento"
+      , "genesis"
+      , "velab-genesis"
+      , "motion-lis-genesis"
+      ]
+
+tprocWorkspace :: [Project]
+tprocWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
@@ -161,6 +178,20 @@ testWorkspace = projects
       , "my-app5"
       ]
 
+tpropWorkspace :: [Project]
+tpropWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace/"
+    projects = map (wsProject workspace)
+      [ "touch-property"
+      , "bi-temporal"
+      , "beta"
+      , "classificacao"
+      , "modifiers"
+      , "beta-temporal"
+      ]
+
+
 wsProject :: FilePath -> Text -> Project
 wsProject ws name = Project name (ws ++ "/" ++ T.unpack name)
 
@@ -177,3 +208,9 @@ changeConfig config = do
   unless (config `elem` map configName configurations) $
     throwA $ "Unknown configuration '{}'" % config
   liftIO $ ST.writeFile defaultConfigFile $ T.toStrict config
+
+maybeGrepPropertyParser :: Parser (Maybe ((Text, Text) -> Bool))
+maybeGrepPropertyParser = fmap (fmap grep) $ optional text
+  where
+    grep :: Text -> (Text, Text) -> Bool
+    grep s (n, v) = or $ map (s `T.isInfixOf`) [n, v]

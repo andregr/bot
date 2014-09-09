@@ -56,7 +56,7 @@ decodeProjectsSpecifier available = decode
         ([], known)  -> Right known
         (unknown, _) -> Left $ "Unknown projects '{}'" % (commas unknown)
       where
-        eithers = partitionEithers $ map (lookup' projectsByName) names
+        eithers = partitionEithers $ map (parseProject available) names
     decode (ProjectRange (ms, me)) = case (maybeLookup ms, maybeLookup me) of
         (Right s, Right e) -> Right $ range (s, e) available
         (Right _, Left n) -> Left $ "Unknown project '{}'" % n
@@ -64,9 +64,12 @@ decodeProjectsSpecifier available = decode
         (Left n1, Left n2) -> Left $ "Unknown projects '{}'" % (commas [n1, n2])
       where
         maybeLookup Nothing = Right Nothing
-        maybeLookup (Just n) = fmap Just $ lookup' projectsByName n
+        maybeLookup (Just n) = fmap Just $ (parseProject available) n
     decode (ProjectBinary bools) = Right $ map snd $ filter fst $ zip bools available
 
+parseProject :: [Project] -> Text -> Either Text Project
+parseProject available = lookup' projectsByName
+  where
     projectsByName = map (projectName &&& id) available
     lookup' m k = case lookup k m of
       Nothing -> Left k

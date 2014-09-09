@@ -7,6 +7,7 @@ module Bot.Action.Action
   , cd
   , forEachProject
   , forEachProject2
+  , forEachProject2'
   , silentProjectCommand
   , bashAction
   ) where
@@ -58,12 +59,18 @@ bash cmd = do
 
         2. Make sure the process is over when this function returns
         -}
-        strictOutput <- T.fromStrict <$> ST.hGetContents h
-        case copyOutput of
-          Off      -> return ()
-          ToFile f -> appendOutput strictOutput f
-          ToStdout -> hAppendOutput strictOutput stdout
-
+        
+        strictOutput <- case copyOutput of
+          Off      -> T.fromStrict <$> ST.hGetContents h
+          ToFile f -> do
+            output <- T.hGetContents h
+            appendOutput output f
+            return output
+          ToStdout -> do
+            output <- T.hGetContents h
+            hAppendOutput output stdout
+            return output
+            
         exitCode <- waitForProcess p
           
         case exitCode of
@@ -127,6 +134,10 @@ forEachProject2 :: (a -> Project -> Action) -> a -> [Project] -> Action
 forEachProject2 action arg1 projects = forM_ projects $ \project -> do
     putProjectName project >> action arg1 project
 
+forEachProject2' :: (Project -> a -> Action) -> [Project] -> a -> Action
+forEachProject2' action projects arg2 = forM_ projects $ \project -> do
+    putProjectName project >> action project arg2
+
 putProjectName :: Project -> ActionM ()
 putProjectName p = liftIO $ do
   T.putStr (leftAlign 30 $ projectName p <> ":  ")
@@ -138,10 +149,10 @@ silentProjectCommand cmd project =
       (bash cmd >> return ()) `catch` showError
   where 
     showError :: ActionException -> ActionM ()
-    showError (e@(ActionException output)) = do
+    showError (ActionException output) = do
       printf "\n\nBash command '{}' failed on project '{}'. Output:" (cmd, projectName project)
       liftIO $ showOutput output
-      throwM e
+      throwA ""
 
 bashAction :: Text -> Project -> Action
 bashAction cmd project =

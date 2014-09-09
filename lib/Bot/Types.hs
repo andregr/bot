@@ -17,6 +17,9 @@ module Bot.Types
   , Error(..)
   , ShowHelp(..)
   , Help
+  , defaultOptions
+  , runAction
+  , runActionDebug
   ) where
 
 import Bot.Util
@@ -37,6 +40,15 @@ type ActionM = Trans.ReaderT Options IO
 data Options = Options
   { optBashCopyOutput :: BashCopyOutput
   }
+
+defaultOptions :: Options
+defaultOptions = Options Off
+
+runAction :: ActionM a -> Options -> IO a
+runAction a opt = Trans.runReaderT a opt
+
+runActionDebug :: ActionM a -> IO a
+runActionDebug a = Trans.runReaderT a defaultOptions
 
 data BashCopyOutput = Off | ToStdout | ToFile FilePath
 

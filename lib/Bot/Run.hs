@@ -11,7 +11,6 @@ import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Control.Monad.Catch
-import Control.Monad.Trans.Reader
 import Data.Monoid
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
@@ -33,10 +32,10 @@ run argStrings = do
         printHelp maybeDefaultConfig >> exitSuccess
       RunAction options _ a -> return (options, a)
       
-    runReaderT action options `catch` \(ActionException e) -> do
-      if T.null e
-         then printf "\n\nCommand '{}' failed" (Only cmd)
-         else printf "\n\nCommand '{}' failed:\n{}" (cmd, e)
+    runAction action options `catch` \(ActionException msg) -> do
+      if T.null msg
+         then printf "Command '{}' failed" (Only cmd)
+         else T.putStrLn msg
       exitFailure
   where
     args = fmap T.pack argStrings

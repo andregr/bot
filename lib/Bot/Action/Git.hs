@@ -3,6 +3,7 @@
 module Bot.Action.Git
   ( git
   , createBranch
+  , fetch
   , status
   , nuke
   , deleteBranches
@@ -26,9 +27,14 @@ git cmd project = silentProjectCommand ("git {}" % cmd) project
 createBranch :: Text -> Project -> Action
 createBranch branch project = silentProjectCommand ("git checkout HEAD -b {}" % branch) project
 
+fetch :: Project -> Action
+fetch project = do
+  git "fetch" project
+  status project
+
 status :: Project -> Action
 status project = do
-    void $ bash "git add -A ."
+    void $ cd (projectPath project) $ bash "git add -A ."
     branch <- currentBranch project
     changes <- changeCount project
     maybeDivergence <- divergence project
