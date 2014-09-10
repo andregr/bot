@@ -110,23 +110,23 @@ makeConfiguration name projects = Configuration name commands help
            ++ [ "" ]
            ++ [ "Projects:" ]
            ++ [ "" ]
-           ++ map (indent 1 . projectName) projects
+           ++ map (indent 1 . (\p -> "{} ({})" %% [projectName p, commas $ projectAliases p])) projects
 
 comWorkspace :: [Project]
 comWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ "financeiro"
-      , "cobranca-api"
-      , "geradorrps"
-      , "comercial"
-      , "faturamento"
-      , "bpa-comercial"
-      , "autorizacao"
-      , "velab-comercial"
-      , "tiss-comercial"
-      , "comercial-lis"
+      [ ("financeiro", ["fin"])
+      , ("cobranca-api", ["cob"])
+      , ("geradorrps", ["ger"])
+      , ("comercial", ["com"])
+      , ("faturamento", ["fat"])
+      , ("bpa-comercial", ["bpa"])
+      , ("autorizacao", ["auto"])
+      , ("velab-comercial", ["vcom"])
+      , ("tiss-comercial", ["tiss"])
+      , ("comercial-lis", ["lis"])
       ]
 
 genWorkspace :: [Project]
@@ -134,13 +134,13 @@ genWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ "comercial"
-      , "faturamento"
-      , "velab-comercial"
-      , "atendimento"
-      , "genesis"
-      , "velab-genesis"
-      , "motion-lis-genesis"
+      [ ("comercial", ["com"])
+      , ("faturamento", ["fat"])
+      , ("velab-comercial", ["vcom"])
+      , ("atendimento", ["ate"])
+      , ("genesis", [])
+      , ("velab-genesis", ["vgen"])
+      , ("motion-lis-genesis", ["gen"])
       ]
 
 tprocWorkspace :: [Project]
@@ -148,11 +148,13 @@ tprocWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ "touch-protocol"
-      , "integracao-comercial"
-      , "comercial"
-      , "faturamento"
-      , "comercial-lis"
+      [ ("touch-protocol", ["prot"])
+      , ("integracao-comercial", ["int"])
+      , ("cobranca-api", ["cob"])
+      , ("comercial", ["com"])
+      , ("faturamento", ["fat"])
+      , ("velab-comercial", ["vcom"])
+      , ("comercial-lis", ["lis"])
       ]
 
 releaserWorkspace :: [Project]
@@ -160,10 +162,10 @@ releaserWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace/releaser/test/releaser_workspace"
     projects = map (wsProject workspace)
-      [ "release-test-root"
-      , "release-test-alpha"
-      , "release-test-beta"
-      , "release-test-charlie"
+      [ ("release-test-root", ["root"])
+      , ("release-test-alpha", ["alpha"])
+      , ("release-test-beta", ["beta"])
+      , ("release-test-charlie", ["charlie"])
       ]
 
 testWorkspace :: [Project]
@@ -171,11 +173,11 @@ testWorkspace = projects
   where
     workspace = "/Users/andre/Code/bot/test/data"
     projects = map (wsProject workspace)
-      [ "my-app"
-      , "my-app2"
-      , "my-app3"
-      , "my-app4"
-      , "my-app5"
+      [ ("my-app", [])
+      , ("my-app2", [])
+      , ("my-app3", [])
+      , ("my-app4", [])
+      , ("my-app5", [])
       ]
 
 tpropWorkspace :: [Project]
@@ -183,17 +185,17 @@ tpropWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace/"
     projects = map (wsProject workspace)
-      [ "touch-property"
-      , "bi-temporal"
-      , "beta"
-      , "classificacao"
-      , "modifiers"
-      , "beta-temporal"
+      [ ("touch-property", ["tprop"])
+      , ("bi-temporal", ["bi"])
+      , ("beta", ["bta"])
+      , ("classificacao", ["class"])
+      , ("modifiers", ["mod"])
+      , ("beta-temporal", ["bbt"])
       ]
 
 
-wsProject :: FilePath -> Text -> Project
-wsProject ws name = Project name (ws ++ "/" ++ T.unpack name)
+wsProject :: FilePath -> (Text, [Text]) -> Project
+wsProject ws (name, aliases) = Project name (ws ++ "/" ++ T.unpack name) aliases
 
 configure :: Action
 configure = do

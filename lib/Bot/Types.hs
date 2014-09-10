@@ -57,7 +57,7 @@ data ActionException = ActionException Text
 
 instance Exception ActionException
 
-data Project = Project { projectName :: Text, projectPath :: FilePath }
+data Project = Project { projectName :: Text, projectPath :: FilePath, projectAliases :: [Text] }
   deriving Show
 
 instance Eq Project where
