@@ -17,7 +17,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
-import qualified Data.Text.IO as ST -- strict IO to avoid locks from multiple calls
+import qualified Data.Text.IO as ST -- strict IO to avoid locks between different calls using the same file
 import System.Directory
 
 defaultConfigFile :: FilePath
@@ -44,59 +44,59 @@ makeConfiguration name projects = Configuration name commands help
   where
     gitOk c p = git c p >> (liftIO $ T.putStrLn "ok")
     commands =
-      [ Command "configure" $
+      [ Command "configure" ["conf"] $
             pure configure
 
-      , Command "changeConfig" $
+      , Command "changeConfig" ["cc"] $
             changeConfig
             <$> arg "config" text
 
-      , Command "reinstall" $
+      , Command "reinstall" ["ri"] $
             forEachProject2 maven
             <$> pure "-DskipTests=true clean install"
             <*> workspaceProjects
           
-      , Command "install" $
+      , Command "install" ["i"] $
             forEachProject2 maven
             <$> pure "-DskipTests=true install"
             <*> workspaceProjects
           
-      , Command "status" $
+      , Command "status" ["s"] $
             forEachProject status
             <$> workspaceProjects
 
-      , Command "fetch" $
+      , Command "fetch" ["f"] $
             forEachProject fetch
             <$> workspaceProjects
 
-      , Command "deleteBranches" $
+      , Command "deleteBranches" [] $
             forEachProject deleteBranches
             <$> workspaceProjects
 
-      , Command "nuke" $
+      , Command "nuke" [] $
             forEachProject (\p -> nuke p >> (liftIO $ T.putStrLn "ok"))
             <$> workspaceProjects
 
-      , Command "pull" $
+      , Command "pull" [] $
             forEachProject2 gitOk
             <$> pure "pull"
             <*> workspaceProjects
           
-      , Command "createBranch" $
+      , Command "createBranch" [] $
             forEachProject2 createBranch
             <$> arg "branch" text
             <*> workspaceProjects
           
-      , Command "version" $
+      , Command "version" ["v"] $
             forEachProject version
             <$> workspaceProjects
 
-      , Command "properties" $
+      , Command "properties" ["ps"] $
             forEachProject2' properties
             <$> workspaceProjects
             <*> arg "[matching]" maybeGrepPropertyParser
 
-      , Command "bash" $
+      , Command "bash" [] $
             forEachProject2 bashAction
             <$> arg "command" text
             <*> workspaceProjects
@@ -110,7 +110,14 @@ makeConfiguration name projects = Configuration name commands help
            ++ [ "" ]
            ++ [ "Projects:" ]
            ++ [ "" ]
-           ++ map (indent 1 . (\p -> "{} ({})" %% [projectName p, commas $ projectAliases p])) projects
+           ++ map (indent 1 . showProject) projects
+
+    showProject p = "{}{}" %% [projectName p, showAliases]
+      where
+        showAliases = case projectAliases p of
+          []  -> ""
+          [a] -> " (alias: {})" % a
+          as  -> " (aliases: {})" % commas as
 
 comWorkspace :: [Project]
 comWorkspace = projects
@@ -138,6 +145,8 @@ genWorkspace = projects
       , ("faturamento", ["fat"])
       , ("velab-comercial", ["vcom"])
       , ("atendimento", ["ate"])
+      , ("pagamento", ["pag"])
+      , ("produto", ["prod"])
       , ("genesis", [])
       , ("velab-genesis", ["vgen"])
       , ("motion-lis-genesis", ["gen"])

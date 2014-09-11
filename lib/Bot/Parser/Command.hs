@@ -13,15 +13,23 @@ import Data.Monoid ((<>))
 import qualified Data.Text.Lazy as T
 
 commandParser :: [Command a] -> Parser (Command a)
-commandParser commands = do
+commandParser available = do
     let readCommandName = T.tail <$> text ? ("-" `T.isPrefixOf`)
     name <- readCommandName `onExceptP` "Expected command (starting with '-')"
-    case lookup name commandMap of
-      Nothing -> throwP $ Error [unknownCommandMsg name]
-      Just c  -> return c
+    case lookupCommand available name of
+      Left n -> throwP $ Error [unknownCommandMsg n]
+      Right c  -> return c
   where
-    commandMap = map (commandName &&& id) commands
     unknownCommandMsg w = "Unknown command '{}'" % w
+
+lookupCommand :: [Command a] -> Text -> Either Text (Command a)
+lookupCommand available = lookup' (commandsByName ++ commandsByAliases)
+  where
+    commandsByName = map (commandName &&& id) available
+    commandsByAliases = concatMap (\c -> map (id &&& const c) $ commandAliases c) available
+    lookup' m k = case lookup k m of
+      Nothing -> Left k
+      Just v  -> Right v
 
 applicationParser :: [Command a] -> Parser (Application a)
 applicationParser commands = Application <$> parseCommand <*> parseArgs

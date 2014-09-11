@@ -103,11 +103,20 @@ class ShowHelp a where
 
 data Command a = Command
   { commandName :: Text
+  , commandAliases :: [Text]
   , applyCommand :: Reader a
   }
 
 instance ShowHelp (Command a) where
-  showHelp c = ["-" <> commandName c <> " " <> showReader (applyCommand c)]
+  showHelp c = [ "-{}{}{}" %% [commandName c, showArgs, showAliases] ]
+    where
+      showArgs = case showReader $ applyCommand c of
+        "" -> ""
+        s -> " {}" % s
+      showAliases = case commandAliases c of
+        []  -> ""
+        [a] -> " (alias: {})" % a
+        as  -> " (aliases: {})" % commas as
 
 type Reader = Ap Arg
 

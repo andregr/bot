@@ -19,7 +19,7 @@ data ApplicationKey = ApplicationKey Text [Text]
   deriving (Show, Typeable, Data)
 
 applicationKey :: Application a -> ApplicationKey
-applicationKey (Application (Command n _) as) = ApplicationKey n as
+applicationKey (Application (Command n _ _) as) = ApplicationKey n as
 
 measureTime :: Application a -> IO b -> IO b
 measureTime app action = do
