@@ -34,7 +34,6 @@ configurations :: [Configuration]
 configurations = [ makeConfiguration "com" comWorkspace
                  , makeConfiguration "gen" genWorkspace
                  , makeConfiguration "releaser" releaserWorkspace
-                 , makeConfiguration "tproc" tprocWorkspace
                  , makeConfiguration "test" testWorkspace
                  , makeConfiguration "tprop" tpropWorkspace
                  ]
@@ -91,11 +90,16 @@ makeConfiguration name projects = Configuration name commands help
             forEachProject version
             <$> workspaceProjects
 
-      , Command "properties" ["ps"] $
+      , Command "properties" ["p"] $
             forEachProject2' properties
             <$> workspaceProjects
             <*> arg "[matching]" maybeGrepPropertyParser
 
+      , Command "snapshots" ["ss"] $
+            forEachProject2' properties
+            <$> workspaceProjects
+            <*> pure (Just $ grepProperty "SNAPSHOT")
+            
       , Command "bash" [] $
             forEachProject2 bashAction
             <$> arg "command" text
@@ -124,7 +128,9 @@ comWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ ("financeiro", ["fin"])
+      [ ("touch-protocol", ["tproc"])
+      , ("integracao-comercial", ["int"])
+      , ("financeiro", ["fin"])
       , ("cobranca-api", ["cob"])
       , ("geradorrps", ["ger"])
       , ("comercial", ["com"])
@@ -150,20 +156,6 @@ genWorkspace = projects
       , ("genesis", [])
       , ("velab-genesis", ["vgen"])
       , ("motion-lis-genesis", ["gen"])
-      ]
-
-tprocWorkspace :: [Project]
-tprocWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace"
-    projects = map (wsProject workspace)
-      [ ("touch-protocol", ["prot"])
-      , ("integracao-comercial", ["int"])
-      , ("cobranca-api", ["cob"])
-      , ("comercial", ["com"])
-      , ("faturamento", ["fat"])
-      , ("velab-comercial", ["vcom"])
-      , ("comercial-lis", ["lis"])
       ]
 
 releaserWorkspace :: [Project]
@@ -221,7 +213,7 @@ changeConfig config = do
   liftIO $ ST.writeFile defaultConfigFile $ T.toStrict config
 
 maybeGrepPropertyParser :: Parser (Maybe ((Text, Text) -> Bool))
-maybeGrepPropertyParser = fmap (fmap grep) $ optional text
-  where
-    grep :: Text -> (Text, Text) -> Bool
-    grep s (n, v) = or $ map (s `T.isInfixOf`) [n, v]
+maybeGrepPropertyParser = fmap (fmap grepProperty) $ optional text
+
+grepProperty :: Text -> (Text, Text) -> Bool
+grepProperty s (n, v) = or $ map (s `T.isInfixOf`) [n, v]
