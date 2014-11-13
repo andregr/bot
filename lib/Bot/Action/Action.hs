@@ -10,6 +10,7 @@ module Bot.Action.Action
   , forEachProject2'
   , silentProjectCommand
   , bashAction
+  , bashProjectAction
   ) where
 
 import Bot.Types
@@ -155,7 +156,14 @@ silentProjectCommand cmd project =
       throwA ""
 
 bashAction :: Text -> Project -> Action
-bashAction cmd project =
+bashAction cmd project = do
+  output <- bash (T.replace "{}" (projectName project) cmd)
+  liftIO $ do
+    putStr "\n\n"
+    T.putStrLn output      
+
+bashProjectAction :: Text -> Project -> Action
+bashProjectAction cmd project =
   cd (projectPath project) $ do
     output <- bash cmd
     liftIO $ do

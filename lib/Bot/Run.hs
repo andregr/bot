@@ -46,7 +46,7 @@ run argStrings = do
                       $  "bot "
                       <> "[--help] "
                       <> "[--config NAME] "
-                      <> "[--show-command-output | --pipe-commands-to FILENAME] "
+                      <> "[[--verbose | --show-command-output] | --pipe-commands-to FILENAME] "
                       <> "COMMAND"
                    ]
                 ++ [ "" ]
@@ -108,6 +108,6 @@ optionsParser = Options <$> bashCopyOutputParser
 
 bashCopyOutputParser :: Parser BashCopyOutput
 bashCopyOutputParser =
-      (const ToStdout <$> constant "--show-command-output")
+      (const ToStdout <$> (constant "--verbose" <|> constant "--show-command-output"))
   <|> (const ToFile <$> constant "--pipe-commands-to" <*> path)
   <|> pure Off

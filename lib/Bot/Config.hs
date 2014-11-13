@@ -33,9 +33,11 @@ defaultConfiguration = do
 configurations :: [Configuration]
 configurations = [ makeConfiguration "com" comWorkspace
                  , makeConfiguration "gen" genWorkspace
+                 , makeConfiguration "mot" motWorkspace                   
                  , makeConfiguration "releaser" releaserWorkspace
                  , makeConfiguration "test" testWorkspace
                  , makeConfiguration "tprop" tpropWorkspace
+                 , makeConfiguration "liq" liqWorkspace                   
                  ]
 
 makeConfiguration :: Text -> [Project] -> Configuration
@@ -59,7 +61,7 @@ makeConfiguration name projects = Configuration name commands help
             forEachProject2 maven
             <$> pure "-DskipTests=true install"
             <*> workspaceProjects
-          
+            
       , Command "status" ["s"] $
             forEachProject status
             <$> workspaceProjects
@@ -104,6 +106,11 @@ makeConfiguration name projects = Configuration name commands help
             forEachProject2 bashAction
             <$> arg "command" text
             <*> workspaceProjects
+
+      , Command "bashProject" [] $
+            forEachProject2 bashProjectAction
+            <$> arg "command" text
+            <*> workspaceProjects            
       ]
     
     workspaceProjects = arg "projects" $ projectsParser projects
@@ -137,6 +144,7 @@ comWorkspace = projects
       , ("faturamento", ["fat"])
       , ("bpa-comercial", ["bpa"])
       , ("autorizacao", ["auto"])
+      , ("autorizador", ["aut"])
       , ("velab-comercial", ["vcom"])
       , ("tiss-comercial", ["tiss"])
       , ("comercial-lis", ["lis"])
@@ -147,15 +155,26 @@ genWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ ("comercial", ["com"])
+      [ ("touch-protocol", ["tproc"])
+      , ("integracao-comercial", ["int"])
+      , ("comercial", ["com"])
       , ("faturamento", ["fat"])
+      , ("autorizador", ["aut"])
       , ("velab-comercial", ["vcom"])
       , ("atendimento", ["ate"])
-      , ("pagamento", ["pag"])
-      , ("produto", ["prod"])
-      , ("genesis", [])
-      , ("velab-genesis", ["vgen"])
       , ("motion-lis-genesis", ["gen"])
+      ]
+
+motWorkspace :: [Project]
+motWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace"
+    projects = map (wsProject workspace)
+      [ ("comercial", ["com"])
+      , ("velab-root", ["vroot"])                
+      , ("velab-api", [])
+      , ("velab", [])
+      , ("motion-lis", ["mot"])
       ]
 
 releaserWorkspace :: [Project]
@@ -194,6 +213,31 @@ tpropWorkspace = projects
       , ("beta-temporal", ["bbt"])
       ]
 
+liqWorkspace :: [Project]
+liqWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace/"
+    projects = map (wsProject workspace)
+      [ ("liquibase3", ["liq"])
+      , ("touch-liquibase-commons", ["liqcom"])
+      , ("touch-quartz", ["quartz"])
+      , ("heals-web-admin", ["admin"])
+        
+      , ("touch-property", ["tprop"])
+      , ("bi-temporal", ["bi"])
+      , ("beta", ["bta"])
+      , ("modifiers", ["mod"])
+      , ("beta-temporal", ["bbt"])
+
+      , ("comercial", ["com"])
+      , ("faturamento", ["fat"])
+      , ("bpa-comercial", ["bpa"])
+      , ("velab-comercial", ["vcom"])
+      , ("comercial-lis", ["lis"])
+
+      , ("motion-lis", ["mot"])
+      , ("motion-lis-genesis", ["gen"]) 
+      ]
 
 wsProject :: FilePath -> (Text, [Text]) -> Project
 wsProject ws (name, aliases) = Project name (ws ++ "/" ++ T.unpack name) aliases
