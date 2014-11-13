@@ -157,7 +157,7 @@ silentProjectCommand cmd project =
 
 bashAction :: Text -> Project -> Action
 bashAction cmd project = do
-  output <- bash (T.replace "{}" (projectName project) cmd)
+  output <- bash $ makeBashCommand (T.replace "{}" (projectName project) cmd)
   liftIO $ do
     putStr "\n\n"
     T.putStrLn output      
@@ -165,7 +165,26 @@ bashAction cmd project = do
 bashProjectAction :: Text -> Project -> Action
 bashProjectAction cmd project =
   cd (projectPath project) $ do
-    output <- bash cmd
+    output <- bash $ makeBashCommand cmd
     liftIO $ do
       putStr "\n\n"
       T.putStrLn output
+
+makeBashCommand :: Text -> Text
+makeBashCommand cmd = script 
+  where   
+    -- Several tricks are needed to get bash to expand aliases in
+    -- non-intective shells:
+    -- * -i option for intective mode (maybe this is enough now?)
+    -- * PS1 is set to pretend the shell is interactive, fooling .bashrc
+    -- * The expand_aliases option is set
+    -- * .bashrc is sourced
+    -- * __On a separate line__ the command is executed, because bash only
+    --   expands aliases in lines after they are defined
+    script = T.unlines [ "/bin/bash -i -c '"
+                       , "export PS1=\"-\""
+                       , "shopt -s expand_aliases"
+                       , "source ~/.bashrc"
+                       , cmd
+                       , "'"
+                       ]
