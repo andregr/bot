@@ -18,8 +18,8 @@ import Control.Monad.Catch
 import Control.Monad.IO.Class
 import Data.Maybe
 import Data.Monoid
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 
 git :: Text -> Project -> Action
 git cmd project = silentProjectCommand ("git {}" % cmd) project
@@ -39,20 +39,20 @@ status project = do
     changes <- changeCount project
     maybeDivergence <- divergence project
     liftIO $ T.putStrLn $ commas $ catMaybes [ formatBranch branch
-                                             , formatChangeCount changes
-                                             , formatDivergence maybeDivergence
-                                             ]
+                                           , formatChangeCount changes
+                                           , formatDivergence maybeDivergence
+                                           ]
   where
     formatBranch b = Just b
     
     formatChangeCount 0 = Nothing
     formatChangeCount 1 = Just "1 file changed"
-    formatChangeCount n = Just $ "{} files changed" % (T.pack . show) n
+    formatChangeCount n = Just $ "{} files changed" % (pack . show) n
 
     formatDivergence Nothing = Nothing
     formatDivergence (Just (0,0)) = Nothing
-    formatDivergence (Just (ahead,0)) = Just $ "{} ahead" % (T.pack . show) ahead
-    formatDivergence (Just (0,behind)) = Just $ "{} behind" % (T.pack . show) behind
+    formatDivergence (Just (ahead,0)) = Just $ "{} ahead" % (pack . show) ahead
+    formatDivergence (Just (0,behind)) = Just $ "{} behind" % (pack . show) behind
     formatDivergence (Just (ahead,behind)) = Just $
       "diverged ({} ahead, {} behind)" %% (show ahead, show behind)
 

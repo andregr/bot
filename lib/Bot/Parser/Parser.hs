@@ -27,8 +27,8 @@ import Control.Monad.Trans.Except (runExcept, throwE, catchE)
 import Control.Monad.Trans.State (StateT(..), runStateT, liftCatch)
 import qualified Control.Monad.Trans.State as S (get, put)
 import Data.Monoid ((<>))
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.Read as T (decimal)
+import qualified Data.Text as T
+import qualified Data.Text.Read as T (decimal)
 
 catchP :: Parser a -> (Error -> Parser a) -> Parser a
 catchP p h = Parser $ liftCatch catchE (unParser p) (fmap (unParser) h)
@@ -87,7 +87,7 @@ constant :: Text -> Parser Text
 constant c = text ? (== c)
 
 path :: Parser FilePath
-path = fmap T.unpack text
+path = fmap unpack text
 
 integer :: Parser Int
 integer = do

@@ -15,15 +15,13 @@ module Bot.Action.Action
 
 import Bot.Types
 import Bot.Util
-import Control.Applicative
 import Control.Monad (unless, when, forM_)
 import Control.Monad.Catch
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.Monoid
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
-import qualified Data.Text.IO as ST
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import System.Directory
 import System.Exit
 import System.IO
@@ -42,7 +40,7 @@ bash cmd = do
       (readfd, writefd) <- createPipe
       writeh <- fdToHandle writefd
 
-      (_, _, _, p) <- createProcess (shell (T.unpack cmd)) 
+      (_, _, _, p) <- createProcess (shell (unpack cmd)) 
                                              { std_out = UseHandle writeh
                                              , std_err = UseHandle writeh
                                              , close_fds = False
@@ -62,7 +60,7 @@ bash cmd = do
         -}
         
         strictOutput <- case copyOutput of
-          Off      -> T.fromStrict <$> ST.hGetContents h
+          Off      -> T.hGetContents h
           ToFile f -> do
             output <- T.hGetContents h
             appendOutput output f
@@ -87,13 +85,13 @@ bash cmd = do
         -- No buffering for streaming output
         hSetBuffering h NoBuffering
         dir <- getCurrentDirectory
-        hPutStr h $ T.unpack $
-          "\n\nOutput of '{}' in directory '{}':\n--------------\n\n" %% (cmd, T.pack dir)
+        T.hPutStr h $ 
+          "\n\nOutput '{}' in directory '{}':\n--------------\n\n" %% (cmd, pack dir)
         T.hPutStr h output
 
 bashInteractive :: MonadIO m => Text -> m ()
 bashInteractive cmd = liftIO $ do
-    (_, _, _, p) <- createProcess (shell (T.unpack cmd)) 
+    (_, _, _, p) <- createProcess (shell (unpack cmd)) 
                                      { close_fds = False }
     exitCode <- waitForProcess p
     case exitCode of
@@ -104,7 +102,7 @@ cd :: (MonadMask m, MonadIO m) => FilePath -> m a -> m a
 cd new f = do
   dirExists <- liftIO $ doesDirectoryExist new
   unless dirExists $
-    throwA $ "Directory doesn't exist: {}" % T.pack new
+    throwA $ "Directory doesn't exist: {}" % pack new
   old <- liftIO $ getCurrentDirectory
   let changeDir p = liftIO $ setCurrentDirectory p
   bracket (changeDir new) (const $ changeDir old) (const f)
@@ -114,7 +112,7 @@ showOutput c
     | length (T.lines c) <= 10 = showSimple
     | otherwise                = showPaged
   where
-    showSimple = liftIO $ putStrLn (T.unpack c)
+    showSimple = liftIO $ putStrLn (unpack c)
     
     showPaged = liftIO $ do
       putStr "View output? [Y/n] "
@@ -122,10 +120,10 @@ showOutput c
       line <- getLine
       when (line `elem` ["", "y", "Y"]) $
         withSystemTempFile "bot" $ \path h -> do
-          hPutStrLn h (T.unpack c)
+          hPutStrLn h (unpack c)
           hFlush h
           -- +G: start from the end of the output
-          bashInteractive ("less +G {}" % T.pack path)
+          bashInteractive ("less +G {}" % pack path)
 
 forEachProject :: (Project -> Action) -> [Project] -> Action
 forEachProject action projects = forM_ projects $ \project -> do
@@ -159,7 +157,7 @@ bashAction :: Text -> Project -> Action
 bashAction cmd project = do
   output <- bash $ makeBashCommand (T.replace "{}" (projectName project) cmd)
   liftIO $ do
-    putStr "\n\n"
+    T.putStr "\n\n"
     T.putStrLn output      
 
 bashProjectAction :: Text -> Project -> Action
@@ -167,7 +165,7 @@ bashProjectAction cmd project =
   cd (projectPath project) $ do
     output <- bash $ makeBashCommand cmd
     liftIO $ do
-      putStr "\n\n"
+      T.putStr "\n\n"
       T.putStrLn output
 
 makeBashCommand :: Text -> Text
@@ -196,8 +194,6 @@ replaceVariables vs i = foldl replaceVariable i vs
 
 interpolate :: [(Text, Text)] -> FilePath -> FilePath -> IO ()
 interpolate vs ifn ofn =
-  ST.readFile ifn >>=
-  return . T.fromStrict >>=
+  readTextFile ifn >>=
   return . (replaceVariables vs) >>=
-  return . T.toStrict >>=
-  ST.writeFile ofn
+  writeTextFile ofn

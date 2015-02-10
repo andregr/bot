@@ -15,9 +15,8 @@ import Bot.Util
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
-import qualified Data.Text.IO as ST -- strict IO to avoid locks between different calls using the same file
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import System.Directory
 
 defaultConfigFile :: FilePath
@@ -27,7 +26,7 @@ defaultConfiguration :: IO Text
 defaultConfiguration = do
   fileExists <- doesFileExist defaultConfigFile
   if fileExists
-    then head . T.lines . T.fromStrict <$> ST.readFile defaultConfigFile
+    then head . T.lines <$> readTextFile defaultConfigFile
     else return (configName . head $ configurations)
 
 configurations :: [Configuration]
@@ -43,7 +42,7 @@ configurations = [ makeConfiguration "com" comWorkspace
 makeConfiguration :: Text -> [Project] -> Configuration
 makeConfiguration name projects = Configuration name commands help
   where
-    gitOk c p = git c p >> (liftIO $ T.putStrLn "ok")
+    gitOk c p = git c p >> (liftIO $ putStrLn "ok")
     commands =
       [ Command "configure" ["conf"] $
             pure configure
@@ -79,7 +78,7 @@ makeConfiguration name projects = Configuration name commands help
             <$> workspaceProjects
 
       , Command "nuke" [] $
-            forEachProject (\p -> nuke p >> (liftIO $ T.putStrLn "ok"))
+            forEachProject (\p -> nuke p >> (liftIO $ putStrLn "ok"))
             <$> workspaceProjects
 
       , Command "pull" [] $
@@ -243,7 +242,7 @@ liqWorkspace = projects
       ]
 
 wsProject :: FilePath -> (Text, [Text]) -> Project
-wsProject ws (name, aliases) = Project name (ws ++ "/" ++ T.unpack name) aliases
+wsProject ws (name, aliases) = Project name (ws ++ "/" ++ unpack name) aliases
 
 configure :: Action
 configure = do
@@ -257,7 +256,7 @@ changeConfig :: Text -> Action
 changeConfig config = do
   unless (config `elem` map configName configurations) $
     throwA $ "Unknown configuration '{}'" % config
-  liftIO $ ST.writeFile defaultConfigFile $ T.toStrict config
+  liftIO $ writeTextFile defaultConfigFile  config
 
 maybeGrepPropertyParser :: Parser (Maybe ((Text, Text) -> Bool))
 maybeGrepPropertyParser = fmap (fmap grepProperty) $ optional text
@@ -273,7 +272,7 @@ generateScripts commands = do
         (name:_) -> liftIO $ do
           T.putStrLn $
             "TODO Created script {} for command {}" %% (name, commandName command)
-          ST.writeFile (T.unpack $ "{}/{}" %% (dir, name)) $ T.toStrict
+          writeTextFile (unpack $ "{}/{}" %% (dir, name)) $
             ("#!/bin/bash\n\nbot -{} TODO" % name)
   where
-    dir = "/home/andregr/Code/bot/dist/scripts" :: T.Text
+    dir = "/home/andregr/Code/bot/dist/scripts" :: Text

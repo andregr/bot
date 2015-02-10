@@ -11,10 +11,9 @@ import Bot.Util
 import Control.Applicative
 import Control.Arrow
 import qualified Data.Attoparsec.Combinator as A
-import qualified Data.Attoparsec.Text.Lazy as A
+import qualified Data.Attoparsec.Text as A
 import Data.Either
 import Data.List
-import qualified Data.Text.Lazy as T
 
 projectParser :: [Project] -> Parser Project
 projectParser available = do
@@ -36,9 +35,9 @@ projectParser available = do
 projectsParser :: [Project] -> Parser [Project]
 projectsParser available = do
   t <- text
-  let maybeSpecifier = A.eitherResult $ A.parse projectsSpecifierParser t
+  let maybeSpecifier = A.parseOnly projectsSpecifierParser t
   maybeProjects <- case maybeSpecifier of
-    Left e -> throwP $ Error [ "Attoparsec failed with error {}" % T.pack e ]
+    Left e -> throwP $ Error [ "Attoparsec failed with error {}" % pack e ]
     Right specifier -> return $ decodeProjectsSpecifier available specifier
   case maybeProjects of
     Left e -> throwP $ Error [ e ]
@@ -108,7 +107,7 @@ projectListParser = projectNameParser `A.sepBy` (A.string ",")
                     <* A.endOfInput
 
 projectNameParser :: A.Parser Text
-projectNameParser = fmap T.pack $ A.many1 $ A.satisfy (`notElem` ",.")
+projectNameParser = fmap pack $ A.many1 $ A.satisfy (`notElem` ",.")
 
 range :: Eq a => (Maybe a, Maybe a) -> [a] -> [a]
 range (ms, me) as = slice (ms >>= index) (me >>= index) as

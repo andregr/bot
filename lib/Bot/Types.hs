@@ -30,7 +30,6 @@ import Control.Monad.Trans.Except (Except)
 import Control.Monad.Trans.State
 import qualified Control.Monad.Trans.Reader as Trans
 import Data.Monoid
-import qualified Data.Text.Lazy as T
 import Data.Typeable (Typeable)
 
 type Action = Trans.ReaderT Options IO ()
@@ -139,4 +138,4 @@ newtype Parser a = Parser { unParser :: StateT [Text] (Except Error) a }
 
 instance Show Error where
   show (Error []) = "(no message)"
-  show (Error es) = unlines $ map (\(i, e) -> T.unpack $ indent i e) $ zip [0..] es
+  show (Error es) = unlines $ map (\(i, e) -> unpack $ indent i e) $ zip [0..] es

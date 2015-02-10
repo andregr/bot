@@ -15,8 +15,8 @@ import Bot.Util
 import Control.Arrow
 import Control.Monad
 import Control.Monad.IO.Class
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Text.XML.Light as X
 import System.Directory
 
@@ -25,7 +25,7 @@ maven cmd project = do
   let path = projectPath project
   isMavenProject <- liftIO $ doesFileExist $ path ++ "/pom.xml"
   unless isMavenProject $ do
-    throwA $ "Not a project (pom.xml not found): {}" % T.pack path
+    throwA $ "Not a project (pom.xml not found): {}" % pack path
   silentProjectCommand ("mvn {}" % cmd) project
   liftIO $ putStrLn "ok"
 
@@ -51,7 +51,7 @@ properties project mf = do
       vs = filter f ps
 
   liftIO $ do
-    T.putStrLn ""
+    putStrLn ""
     mapM_ (\(n,v) -> T.putStrLn . indent 1 $ "{}: {}" %% (n, v)) vs
 
 snapshots :: Project -> Action
@@ -66,13 +66,13 @@ snapshots project = do
       vs = filter f ps
 
   liftIO $ do
-    T.putStrLn ""
+    putStrLn ""
     mapM_ (\(n,v) -> T.putStrLn . indent 1 $ "{}: {}" %% (n, v)) vs      
 
 readProperties :: [X.Content] -> ActionM [(Text, Text)]
 readProperties rs = do
   let path = ["project", "properties"]
-      prop = T.pack . X.qName . X.elName &&& value
+      prop = pack . X.qName . X.elName &&& value
       ps = mapElementsAt path (map prop . X.elChildren) rs
   case ps of
     [] -> throwA $ "Couldn't find /{}" % T.intercalate "/" path
@@ -92,5 +92,5 @@ readPOM project = do
   let pom = projectPath project ++ "/pom.xml"
   pomExists <- liftIO $ doesFileExist pom
   unless pomExists $
-    throwA $ "pom doesn't exist at '{}'" % T.pack pom
+    throwA $ "pom doesn't exist at '{}'" % pack pom
   readXML pom

@@ -10,7 +10,7 @@ import Bot.Util
 import Control.Applicative
 import Control.Arrow ((&&&))
 import Data.Monoid ((<>))
-import qualified Data.Text.Lazy as T
+import qualified Data.Text as T
 
 commandParser :: [Command a] -> Parser (Command a)
 commandParser available = do

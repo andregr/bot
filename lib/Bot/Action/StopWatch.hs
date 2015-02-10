@@ -6,7 +6,7 @@ module Bot.Action.StopWatch
   ) where
 
 import Bot.Types
-import Data.Text.Lazy
+import Bot.Util
 import Data.Typeable
 import Text.JSON.Generic
 

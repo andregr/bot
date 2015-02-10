@@ -12,8 +12,8 @@ import Control.Arrow
 import Control.Monad
 import Control.Monad.Catch
 import Data.Monoid
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import System.Exit
 import System.IO
 
@@ -40,7 +40,7 @@ run argStrings = do
          else T.putStrLn msg
       exitFailure
   where
-    args = fmap T.pack argStrings
+    args = fmap pack argStrings
     printHelp maybeConfig = T.putStrLn $ T.intercalate "\n" $
                    [ "Usage:" ]
                 ++ [ "" ]

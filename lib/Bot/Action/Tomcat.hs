@@ -8,7 +8,6 @@ import Bot.Types
 import Bot.Util
 import Control.Applicative
 import Data.Monoid
-import qualified Data.Text.Lazy as T
 import System.FilePath.Posix
 
 deploy :: Project -> Action
@@ -37,4 +36,4 @@ findProjectSourceFiles projPath name = do
   let findCmd = ("find -not -path '\''*/target/*'\'' "
               <> "-not -path '\''*/bin/*'\'' "
               <> "-name '{}'") % name
-  (lines . T.unpack) <$>  cd projPath (bash findCmd)  
+  (lines . unpack) <$>  cd projPath (bash findCmd)  
