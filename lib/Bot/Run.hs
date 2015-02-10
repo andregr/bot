@@ -30,6 +30,8 @@ run argStrings = do
     (options, (cmd, action)) <- case execution of
       ShowHelp              ->
         printHelp maybeDefaultConfig >> exitSuccess
+      ShowFullHelp          ->
+        printHelp Nothing >> exitSuccess
       RunAction options _ a -> return (options, a)
       
     runAction action options `catch` \(ActionException msg) -> do
@@ -69,6 +71,7 @@ oneConfigHelp c =    [ "Configuration '{}':" % configName c ]
                   ++ [ "" ]
 
 data Execution = ShowHelp
+               | ShowFullHelp
                | RunAction Options Configuration (Text, Action)
 
 parseExecution :: Text -> [Text] -> IO Execution
@@ -83,7 +86,8 @@ executionParser defaultConfig = do
   let helpParser = fmap Just (constant "-h" <|> constant "--help") <|> pure Nothing
   help <- helpParser
   case help of
-    Just _  -> return ShowHelp
+    Just "-h"  -> return ShowHelp
+    Just _ -> return ShowFullHelp
     Nothing -> do
       config <- configurationParser defaultConfig
       let commands = configCommands config

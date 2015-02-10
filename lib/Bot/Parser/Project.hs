@@ -53,9 +53,14 @@ decodeProjectsSpecifier available = decode
   where
     decode :: ProjectsSpecifier -> Either Text [Project]
     decode (ProjectList names) = case eithers of
-        ([], known)  -> Right known
+        ([], known)  -> Right $ sortBy (indexOrder available) known
         (unknown, _) -> Left $ "Unknown projects '{}'" % (commas unknown)
       where
+        indexOrder ps p1 p2 = compare (elemIndex n1 ns) (elemIndex n2 ns)
+          where
+            ns = map projectName ps
+            n1 = projectName p1
+            n2 = projectName p2
         eithers = partitionEithers $ map (lookupProject available) names
     decode (ProjectRange (ms, me)) = case (maybeLookup ms, maybeLookup me) of
         (Right s, Right e) -> Right $ range (s, e) available
@@ -99,9 +104,8 @@ projectRangeParser = (\s _ e _ -> (s, e))
                            <*> A.endOfInput
 
 projectListParser :: A.Parser [Text]
-projectListParser = fmap fst $ (,)
-                        <$> projectNameParser `A.sepBy` (A.string ",")
-                        <*> A.endOfInput
+projectListParser = projectNameParser `A.sepBy` (A.string ",")
+                    <* A.endOfInput
 
 projectNameParser :: A.Parser Text
 projectNameParser = fmap T.pack $ A.many1 $ A.satisfy (`notElem` ",.")

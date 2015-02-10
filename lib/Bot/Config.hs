@@ -27,7 +27,7 @@ defaultConfiguration :: IO Text
 defaultConfiguration = do
   fileExists <- doesFileExist defaultConfigFile
   if fileExists
-    then head . T.lines . T.fromStrict<$> ST.readFile defaultConfigFile
+    then head . T.lines . T.fromStrict <$> ST.readFile defaultConfigFile
     else return (configName . head $ configurations)
 
 configurations :: [Configuration]
@@ -52,6 +52,10 @@ makeConfiguration name projects = Configuration name commands help
             changeConfig
             <$> arg "config" text
 
+      , Command "generateScripts" [] $
+            generateScripts
+            <$> pure commands
+            
       , Command "reinstall" ["ri"] $
             forEachProject2 maven
             <$> pure "-DskipTests=true clean install"
@@ -92,15 +96,18 @@ makeConfiguration name projects = Configuration name commands help
             forEachProject version
             <$> workspaceProjects
 
+      , Command "parentVersion" ["pv"] $
+            forEachProject parentVersion
+            <$> workspaceProjects
+            
       , Command "properties" ["p"] $
             forEachProject2' properties
             <$> workspaceProjects
             <*> arg "[matching]" maybeGrepPropertyParser
 
       , Command "snapshots" ["ss"] $
-            forEachProject2' properties
+            forEachProject snapshots
             <$> workspaceProjects
-            <*> pure (Just $ grepProperty "SNAPSHOT")
             
       , Command "bash" [] $
             forEachProject2 bashAction
@@ -135,18 +142,13 @@ comWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ ("touch-protocol", ["tproc"])
-      , ("integracao-comercial", ["int"])
-      , ("financeiro", ["fin"])
-      , ("cobranca-api", ["cob"])
-      , ("geradorrps", ["ger"])
+      [ ("cobranca-api", ["cob"])
       , ("comercial", ["com"])
+      , ("touch-protocol", ["tproc"])
+      , ("integracao-comercial", ["int"])        
       , ("faturamento", ["fat"])
       , ("bpa-comercial", ["bpa"])
-      , ("autorizacao", ["auto"])
-      , ("autorizador", ["aut"])
       , ("velab-comercial", ["vcom"])
-      , ("tiss-comercial", ["tiss"])
       , ("comercial-lis", ["lis"])
       ]
 
@@ -155,12 +157,17 @@ genWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ ("touch-protocol", ["tproc"])
-      , ("integracao-comercial", ["int"])
+      [ ("financeiro", ["fin"])
+      , ("cobranca-api", ["cob"])
+      , ("touch-protocol", ["tproc"])
       , ("comercial", ["com"])
+      , ("integracao-comercial", ["int"])
       , ("faturamento", ["fat"])
+      , ("bpa-comercial", ["bpa"])
+      , ("autorizacao", ["auto"])
       , ("autorizador", ["aut"])
       , ("velab-comercial", ["vcom"])
+      , ("tiss-comercial", ["tiss"])
       , ("atendimento", ["ate"])
       , ("motion-lis-genesis", ["gen"])
       ]
@@ -219,24 +226,20 @@ liqWorkspace = projects
     workspace = "/home/andregr/work/workspace/"
     projects = map (wsProject workspace)
       [ ("liquibase3", ["liq"])
-      , ("touch-liquibase-commons", ["liqcom"])
-      , ("touch-quartz", ["quartz"])
-      , ("heals-web-admin", ["admin"])
+      -- , ("touch-liquibase-commons", ["liqcom"])
+      -- , ("touch-quartz", ["quartz"])
+      -- , ("heals-web-admin", ["admin"])
         
-      , ("touch-property", ["tprop"])
-      , ("bi-temporal", ["bi"])
-      , ("beta", ["bta"])
-      , ("modifiers", ["mod"])
-      , ("beta-temporal", ["bbt"])
+      -- , ("touch-property", ["tprop"])
+      -- , ("bi-temporal", ["bi"])
+      -- , ("beta", ["bta"])
+      -- , ("modifiers", ["mod"])
+      -- , ("beta-temporal", ["bbt"])
 
-      , ("comercial", ["com"])
-      , ("faturamento", ["fat"])
-      , ("bpa-comercial", ["bpa"])
-      , ("velab-comercial", ["vcom"])
       , ("comercial-lis", ["lis"])
-
       , ("motion-lis", ["mot"])
-      , ("motion-lis-genesis", ["gen"]) 
+      , ("motion-lis-genesis", ["gen"])
+      , ("armazenamento", ["armz"])
       ]
 
 wsProject :: FilePath -> (Text, [Text]) -> Project
@@ -245,7 +248,7 @@ wsProject ws (name, aliases) = Project name (ws ++ "/" ++ T.unpack name) aliases
 configure :: Action
 configure = do
   let bot = "/home/andregr/Code/bot"
-  bashInteractive $ "emacs {}/lib/Bot/Config.hs" % bot
+  bashInteractive $ "emacs -nw {}/lib/Bot/Config.hs" % bot
   liftIO $ putStrLn "Recompiling"
   output <- bash $ "cd {} && /home/andregr/.cabal/bin/cabal build" % bot
   liftIO $ T.putStrLn output  
@@ -261,3 +264,16 @@ maybeGrepPropertyParser = fmap (fmap grepProperty) $ optional text
 
 grepProperty :: Text -> (Text, Text) -> Bool
 grepProperty s (n, v) = or $ map (s `T.isInfixOf`) [n, v]
+
+generateScripts :: [Command a] -> Action
+generateScripts commands = do
+    void $ forM commands $ \command -> do
+      case commandAliases command of
+        []    -> return ()
+        (name:_) -> liftIO $ do
+          T.putStrLn $
+            "TODO Created script {} for command {}" %% (name, commandName command)
+          ST.writeFile (T.unpack $ "{}/{}" %% (dir, name)) $ T.toStrict
+            ("#!/bin/bash\n\nbot -{} TODO" % name)
+  where
+    dir = "/home/andregr/Code/bot/dist/scripts" :: T.Text

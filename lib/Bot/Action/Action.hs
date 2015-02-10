@@ -188,3 +188,16 @@ makeBashCommand cmd = script
                        , cmd
                        , "'"
                        ]
+
+replaceVariables :: [(Text, Text)] -> Text -> Text
+replaceVariables vs i = foldl replaceVariable i vs
+  where
+    replaceVariable i (v,r) = T.replace ("${{}}" % v) r i
+
+interpolate :: [(Text, Text)] -> FilePath -> FilePath -> IO ()
+interpolate vs ifn ofn =
+  ST.readFile ifn >>=
+  return . T.fromStrict >>=
+  return . (replaceVariables vs) >>=
+  return . T.toStrict >>=
+  ST.writeFile ofn
