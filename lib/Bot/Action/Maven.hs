@@ -26,8 +26,13 @@ maven cmd project = do
   isMavenProject <- liftIO $ doesFileExist $ path ++ "/pom.xml"
   unless isMavenProject $ do
     throwA $ "Not a project (pom.xml not found): {}" % pack path
-  silentProjectCommand ("mvn {}" % cmd) project
-  liftIO $ putStrLn "ok"
+  output <- silentProjectCommand ("mvn {}" % cmd) project
+  liftIO $
+    if "[ERROR]" `T.isInfixOf` output
+      then do
+        putStrLn "Command implicitly failed with '[ERROR]' log"
+        showOutput output
+      else putStrLn "ok"
 
 version :: Project -> Action
 version project = do

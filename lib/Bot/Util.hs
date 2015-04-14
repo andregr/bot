@@ -25,18 +25,19 @@ module Bot.Util
 
 import Control.Monad.IO.Class          ( MonadIO )
 import Data.Monoid
+import Data.Text                       ( Text )
+import qualified Data.Text as T
+import Data.Text.Buildable             ( Buildable )
 import Data.Text.Format                ( Format, Only(..), format )
 import qualified Data.Text.Format as T ( print )
 import Data.Text.Format.Params         ( Params )
-import Data.Text                       ( Text )
-import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as LT
 
 -- Formatting
 -------------------------------------------------
 
-(%) :: Format -> Text -> Text
+(%) :: Buildable a => Format -> a -> Text
 f % t = f %% (Only t)
 infixl 9 %
 

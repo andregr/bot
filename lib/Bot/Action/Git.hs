@@ -22,10 +22,10 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 git :: Text -> Project -> Action
-git cmd project = silentProjectCommand ("git {}" % cmd) project
+git cmd project = void $ silentProjectCommand ("git {}" % cmd) project
 
 createBranch :: Text -> Project -> Action
-createBranch branch project = silentProjectCommand ("git checkout HEAD -b {}" % branch) project
+createBranch branch project = void $ silentProjectCommand ("git checkout HEAD -b {}" % branch) project
 
 fetch :: Project -> Action
 fetch project = do

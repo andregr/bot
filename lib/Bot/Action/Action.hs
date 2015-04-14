@@ -8,6 +8,7 @@ module Bot.Action.Action
   , forEachProject
   , forEachProject2
   , forEachProject2'
+  , showOutput
   , silentProjectCommand
   , bashAction
   , bashProjectAction
@@ -22,6 +23,8 @@ import Control.Monad.Reader.Class
 import Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.IO as LT
 import System.Directory
 import System.Exit
 import System.IO
@@ -53,7 +56,7 @@ bash cmd = do
 
           If copyOutput is Off and the caller function doesn't use the
           process output waitForProcess gets stuck due to a clogged pipe:
-          the process is waiting for its output to be read before continuing
+          the process waits for its output to be read before continuing
           but it never is.
 
         2. Make sure the process is over when this function returns
@@ -62,13 +65,13 @@ bash cmd = do
         strictOutput <- case copyOutput of
           Off      -> T.hGetContents h
           ToFile f -> do
-            output <- T.hGetContents h
+            output <- LT.hGetContents h
             appendOutput output f
-            return output
+            return $ LT.toStrict output
           ToStdout -> do
-            output <- T.hGetContents h
+            output <- LT.hGetContents h
             hAppendOutput output stdout
-            return output
+            return $ LT.toStrict output
             
         exitCode <- waitForProcess p
           
@@ -76,18 +79,18 @@ bash cmd = do
           ExitSuccess   -> return strictOutput
           ExitFailure _ -> throwA strictOutput
   where
-    appendOutput :: Text -> FilePath -> IO ()
+    appendOutput :: LT.Text -> FilePath -> IO ()
     appendOutput output path = do
       withFile path AppendMode (hAppendOutput output)
 
-    hAppendOutput :: Text -> Handle -> IO ()
+    hAppendOutput :: LT.Text -> Handle -> IO ()
     hAppendOutput output h = do
         -- No buffering for streaming output
-        hSetBuffering h NoBuffering
+        hSetBuffering h LineBuffering
         dir <- getCurrentDirectory
         T.hPutStr h $ 
           "\n\nOutput '{}' in directory '{}':\n--------------\n\n" %% (cmd, pack dir)
-        T.hPutStr h output
+        LT.hPutStr h output
 
 bashInteractive :: MonadIO m => Text -> m ()
 bashInteractive cmd = liftIO $ do
@@ -142,12 +145,12 @@ putProjectName p = liftIO $ do
   T.putStr (leftAlign 30 $ projectName p <> ":  ")
   hFlush stdout
 
-silentProjectCommand :: Text -> Project -> Action
+silentProjectCommand :: Text -> Project -> ActionM Text
 silentProjectCommand cmd project =
     cd (projectPath project) $
-      (bash cmd >> return ()) `catch` showError
+      bash cmd `catch` showError
   where 
-    showError :: ActionException -> ActionM ()
+    showError :: ActionException -> ActionM a
     showError (ActionException output) = do
       printf "\n\nBash command '{}' failed on project '{}'. Output:" (cmd, projectName project)
       liftIO $ showOutput output
@@ -186,14 +189,3 @@ makeBashCommand cmd = script
                        , cmd
                        , "'"
                        ]
-
-replaceVariables :: [(Text, Text)] -> Text -> Text
-replaceVariables vs i = foldl replaceVariable i vs
-  where
-    replaceVariable i (v,r) = T.replace ("${{}}" % v) r i
-
-interpolate :: [(Text, Text)] -> FilePath -> FilePath -> IO ()
-interpolate vs ifn ofn =
-  readTextFile ifn >>=
-  return . (replaceVariables vs) >>=
-  writeTextFile ofn

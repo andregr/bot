@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 module Bot.Config
   ( defaultConfiguration
@@ -34,9 +35,9 @@ configurations = [ makeConfiguration "com" comWorkspace
                  , makeConfiguration "gen" genWorkspace
                  , makeConfiguration "mot" motWorkspace                   
                  , makeConfiguration "releaser" releaserWorkspace
-                 , makeConfiguration "test" testWorkspace
                  , makeConfiguration "tprop" tpropWorkspace
-                 , makeConfiguration "liq" liqWorkspace                   
+                 , makeConfiguration "liq" liqWorkspace
+                 , makeConfiguration "oco" ocoWorkspace                                      
                  ]
 
 makeConfiguration :: Text -> [Project] -> Configuration
@@ -63,6 +64,11 @@ makeConfiguration name projects = Configuration name commands help
       , Command "install" ["i"] $
             forEachProject2 maven
             <$> pure "-DskipTests=true install"
+            <*> workspaceProjects
+
+      , Command "sources" [] $
+            forEachProject2 maven
+            <$> pure "dependency:sources"
             <*> workspaceProjects
             
       , Command "status" ["s"] $
@@ -107,6 +113,10 @@ makeConfiguration name projects = Configuration name commands help
       , Command "snapshots" ["ss"] $
             forEachProject snapshots
             <$> workspaceProjects
+
+      , Command "pom" [] $
+            forEachProject pom
+            <$> workspaceProjects
             
       , Command "bash" [] $
             forEachProject2 bashAction
@@ -136,19 +146,57 @@ makeConfiguration name projects = Configuration name commands help
           [a] -> " (alias: {})" % a
           as  -> " (aliases: {})" % commas as
 
+-- releaser
+release_test_root = ("release-test-root", ["root"])
+release_test_alpha = ("release-test-alpha", ["alpha"])
+release_test_beta = ("release-test-beta", ["beta"])
+release_test_charlie = ("release-test-charlie", ["charlie"])
+-- tprop
+touch_property = ("touch-property", ["tprop"])
+bi_temporal = ("bi-temporal", ["bi"])
+beta = ("beta", ["bta"])
+classificacao = ("classificacao", ["class"])
+modifiers = ("modifiers", ["mod"])
+beta_temporal = ("beta-temporal", ["bbt"])
+-- comercial
+touch_protocol = ("touch-protocol", ["tproc"])
+integracao_comercial = ("integracao-comercial", ["int"])        
+financeiro = ("financeiro", ["fin"])
+cobranca_api = ("cobranca-api", ["cob"])
+comercial = ("comercial", ["com"])
+faturamento = ("faturamento", ["fat"])
+bpa_comercial = ("bpa-comercial", ["bpa"])
+autorizacao = ("autorizacao", ["auto"])
+autorizador = ("autorizador", ["aut"])
+velab_comercial = ("velab-comercial", ["vcom"])
+tiss_comercial = ("tiss-comercial", ["tiss"])
+comercial_lis = ("comercial-lis", ["lis"])
+-- motion-lis
+velab_root = ("velab-root", ["vroot"])                
+velab_api = ("velab-api", [])
+velab = ("velab", [])
+motion_lis = ("motion-lis", ["motlis"])
+-- motion-lis-genesis
+atendimento = ("atendimento",["ate"])
+genesis = ("genesis",[])
+velab_genesis = ("velab-genesis",["vgen"])
+motion_lis_genesis = ("motion-lis-genesis", ["gen"])
+-- outros
+ocorrencias = ("ocorrencias", ["oco"])
+armazenamento = ("armazenamento", ["armz"])
+liquibase3 = ("liquibase3", ["liq"])
+touch_liquibase_commons = ("touch-liquibase-commons", ["liqcom"])
+touch_quartz = ("touch-quartz", ["quartz"])
+heals_web_admin = ("heals-web-admin", ["admin"])
+
+
 comWorkspace :: [Project]
 comWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ ("cobranca-api", ["cob"])
-      , ("comercial", ["com"])
-      , ("touch-protocol", ["tproc"])
-      , ("integracao-comercial", ["int"])        
-      , ("faturamento", ["fat"])
-      , ("bpa-comercial", ["bpa"])
-      , ("velab-comercial", ["vcom"])
-      , ("comercial-lis", ["lis"])
+      [ cobranca_api, comercial, touch_protocol, integracao_comercial,
+        faturamento, bpa_comercial, velab_comercial, comercial_lis
       ]
 
 genWorkspace :: [Project]
@@ -156,19 +204,9 @@ genWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ ("financeiro", ["fin"])
-      , ("cobranca-api", ["cob"])
-      , ("touch-protocol", ["tproc"])
-      , ("comercial", ["com"])
-      , ("integracao-comercial", ["int"])
-      , ("faturamento", ["fat"])
-      , ("bpa-comercial", ["bpa"])
-      , ("autorizacao", ["auto"])
-      , ("autorizador", ["aut"])
-      , ("velab-comercial", ["vcom"])
-      , ("tiss-comercial", ["tiss"])
-      , ("atendimento", ["ate"])
-      , ("motion-lis-genesis", ["gen"])
+      [ financeiro, cobranca_api, touch_protocol, integracao_comercial, comercial,
+        faturamento, bpa_comercial, autorizacao, autorizador, velab_comercial,
+        tiss_comercial, genesis, velab_genesis, atendimento, motion_lis_genesis
       ]
 
 motWorkspace :: [Project]
@@ -176,81 +214,52 @@ motWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
-      [ ("comercial", ["com"])
-      , ("velab-root", ["vroot"])                
-      , ("velab-api", [])
-      , ("velab", [])
-      , ("motion-lis", ["mot"])
-      ]
+      [ comercial, velab_root, velab_api, velab, motion_lis_genesis ]
 
 releaserWorkspace :: [Project]
 releaserWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace/releaser/test/releaser_workspace"
     projects = map (wsProject workspace)
-      [ ("release-test-root", ["root"])
-      , ("release-test-alpha", ["alpha"])
-      , ("release-test-beta", ["beta"])
-      , ("release-test-charlie", ["charlie"])
-      ]
-
-testWorkspace :: [Project]
-testWorkspace = projects
-  where
-    workspace = "/Users/andre/Code/bot/test/data"
-    projects = map (wsProject workspace)
-      [ ("my-app", [])
-      , ("my-app2", [])
-      , ("my-app3", [])
-      , ("my-app4", [])
-      , ("my-app5", [])
-      ]
+      [ release_test_root, release_test_alpha, release_test_beta, release_test_charlie ]
 
 tpropWorkspace :: [Project]
 tpropWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace/"
     projects = map (wsProject workspace)
-      [ ("touch-property", ["tprop"])
-      , ("bi-temporal", ["bi"])
-      , ("beta", ["bta"])
-      , ("classificacao", ["class"])
-      , ("modifiers", ["mod"])
-      , ("beta-temporal", ["bbt"])
-      ]
+      [ touch_property, bi_temporal, beta, classificacao, modifiers, beta_temporal ]
 
 liqWorkspace :: [Project]
 liqWorkspace = projects
   where
     workspace = "/home/andregr/work/workspace/"
     projects = map (wsProject workspace)
-      [ ("liquibase3", ["liq"])
-      -- , ("touch-liquibase-commons", ["liqcom"])
-      -- , ("touch-quartz", ["quartz"])
-      -- , ("heals-web-admin", ["admin"])
-        
-      -- , ("touch-property", ["tprop"])
-      -- , ("bi-temporal", ["bi"])
-      -- , ("beta", ["bta"])
-      -- , ("modifiers", ["mod"])
-      -- , ("beta-temporal", ["bbt"])
+      [ liquibase3, touch_liquibase_commons, touch_quartz, heals_web_admin,
+        touch_property, bi_temporal, beta, modifiers, beta_temporal, comercial_lis,
+        motion_lis, motion_lis_genesis, armazenamento ]
 
-      , ("comercial-lis", ["lis"])
-      , ("motion-lis", ["mot"])
-      , ("motion-lis-genesis", ["gen"])
-      , ("armazenamento", ["armz"])
-      ]
+ocoWorkspace :: [Project]
+ocoWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace"
+    projects = map (wsProject workspace)
+      [ faturamento, ocorrencias, autorizacao, autorizador, atendimento, motion_lis_genesis ]
 
 wsProject :: FilePath -> (Text, [Text]) -> Project
 wsProject ws (name, aliases) = Project name (ws ++ "/" ++ unpack name) aliases
 
 configure :: Action
 configure = do
-  let bot = "/home/andregr/Code/bot"
+  let bot = "/home/andregr/Code/bot" :: Text
   bashInteractive $ "emacs -nw {}/lib/Bot/Config.hs" % bot
   liftIO $ putStrLn "Recompiling"
   output <- bash $ "cd {} && /home/andregr/.cabal/bin/cabal build" % bot
   liftIO $ T.putStrLn output  
+
+pom :: Project -> Action
+pom project = do
+  bashInteractive $ "emacs -nw {}/pom.xml" % projectPath project
 
 changeConfig :: Text -> Action
 changeConfig config = do
