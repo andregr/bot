@@ -13,6 +13,7 @@ library
 
   -- double-conversion: Workaround https://github.com/bos/double-conversion/issues/8
   build-depends:       
+    ansi-terminal      == 0.6.*,
     attoparsec         == 0.12.*,
     base               == 4.6.*,
     directory          == 1.2.*,

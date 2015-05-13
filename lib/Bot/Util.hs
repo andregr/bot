@@ -21,6 +21,10 @@ module Bot.Util
   , indent
   , leftAlign
   , rightAlign
+  , checkMarkChar
+  , xMarkChar
+  , C.Color(..)
+  , shellColor
   ) where
 
 import Control.Monad.IO.Class          ( MonadIO )
@@ -33,6 +37,7 @@ import qualified Data.Text.Format as T ( print )
 import Data.Text.Format.Params         ( Params )
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as LT
+import qualified System.Console.ANSI as C
 
 -- Formatting
 -------------------------------------------------
@@ -72,3 +77,12 @@ writeTextFile = T.writeFile
 
 appendTextFile :: FilePath -> Text -> IO ()
 appendTextFile = T.appendFile
+
+checkMarkChar, xMarkChar :: Text
+checkMarkChar = "\10004"
+xMarkChar = "\10008"
+
+shellColor :: C.Color -> Text -> Text
+shellColor c t = T.pack (C.setSGRCode [C.SetColor C.Foreground C.Vivid c])
+              <> t
+              <> T.pack (C.setSGRCode [C.Reset])

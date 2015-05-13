@@ -14,6 +14,7 @@ import Bot.Parser.Project
 import Bot.Types
 import Bot.Util
 import Control.Applicative
+import Control.Arrow ((***))
 import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Text as T
@@ -37,13 +38,15 @@ configurations = [ makeConfiguration "com" comWorkspace
                  , makeConfiguration "releaser" releaserWorkspace
                  , makeConfiguration "tprop" tpropWorkspace
                  , makeConfiguration "liq" liqWorkspace
-                 , makeConfiguration "oco" ocoWorkspace                                      
+                 , makeConfiguration "oco" ocoWorkspace
+                 , makeConfiguration "hist" histWorkspace
+                 , makeConfiguration "ver" verWorkspace
                  ]
 
 makeConfiguration :: Text -> [Project] -> Configuration
 makeConfiguration name projects = Configuration name commands help
   where
-    gitOk c p = git c p >> (liftIO $ putStrLn "ok")
+    gitOk c p = git c p >> (liftIO $ T.putStrLn $ shellColor Green checkMarkChar)
     commands =
       [ Command "configure" ["conf"] $
             pure configure
@@ -57,19 +60,16 @@ makeConfiguration name projects = Configuration name commands help
             <$> pure commands
             
       , Command "reinstall" ["ri"] $
-            forEachProject2 maven
-            <$> pure "-DskipTests=true clean install"
-            <*> workspaceProjects
+            forEachProject (maven "-DskipTests=true clean install" projectProfiles)
+            <$> workspaceProjects
           
       , Command "install" ["i"] $
-            forEachProject2 maven
-            <$> pure "-DskipTests=true install"
-            <*> workspaceProjects
+            forEachProject (maven "-DskipTests=true install" projectProfiles)
+            <$> workspaceProjects
 
       , Command "sources" [] $
-            forEachProject2 maven
-            <$> pure "dependency:sources"
-            <*> workspaceProjects
+            forEachProject (maven "dependency:sources" projectProfiles)
+            <$> workspaceProjects
             
       , Command "status" ["s"] $
             forEachProject status
@@ -151,6 +151,7 @@ release_test_root = ("release-test-root", ["root"])
 release_test_alpha = ("release-test-alpha", ["alpha"])
 release_test_beta = ("release-test-beta", ["beta"])
 release_test_charlie = ("release-test-charlie", ["charlie"])
+
 -- tprop
 touch_property = ("touch-property", ["tprop"])
 bi_temporal = ("bi-temporal", ["bi"])
@@ -158,6 +159,10 @@ beta = ("beta", ["bta"])
 classificacao = ("classificacao", ["class"])
 modifiers = ("modifiers", ["mod"])
 beta_temporal = ("beta-temporal", ["bbt"])
+
+-- app-history
+app_history = ("app-history", ["hist"])
+
 -- comercial
 touch_protocol = ("touch-protocol", ["tproc"])
 integracao_comercial = ("integracao-comercial", ["int"])        
@@ -171,16 +176,24 @@ autorizador = ("autorizador", ["aut"])
 velab_comercial = ("velab-comercial", ["vcom"])
 tiss_comercial = ("tiss-comercial", ["tiss"])
 comercial_lis = ("comercial-lis", ["lis"])
+
 -- motion-lis
 velab_root = ("velab-root", ["vroot"])                
 velab_api = ("velab-api", [])
 velab = ("velab", [])
 motion_lis = ("motion-lis", ["motlis"])
+
 -- motion-lis-genesis
 atendimento = ("atendimento",["ate"])
 genesis = ("genesis",[])
 velab_genesis = ("velab-genesis",["vgen"])
 motion_lis_genesis = ("motion-lis-genesis", ["gen"])
+
+-- veris-pack
+pessoas = ("pessoas", ["pes"])
+pessoas_comercial = ("pessoas-comercial", ["pescom"])
+veris_pack = ("veris-pack", ["ver"])
+
 -- outros
 ocorrencias = ("ocorrencias", ["oco"])
 armazenamento = ("armazenamento", ["armz"])
@@ -189,6 +202,9 @@ touch_liquibase_commons = ("touch-liquibase-commons", ["liqcom"])
 touch_quartz = ("touch-quartz", ["quartz"])
 heals_web_admin = ("heals-web-admin", ["admin"])
 
+projectProfiles :: [(Text, [Text])]
+projectProfiles = map (fst *** id) $
+  [(veris_pack, ["desenvolvimento"])]
 
 comWorkspace :: [Project]
 comWorkspace = projects
@@ -245,6 +261,22 @@ ocoWorkspace = projects
     workspace = "/home/andregr/work/workspace"
     projects = map (wsProject workspace)
       [ faturamento, ocorrencias, autorizacao, autorizador, atendimento, motion_lis_genesis ]
+
+histWorkspace :: [Project]
+histWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace"
+    projects = map (wsProject workspace)
+      [ app_history, comercial_lis, veris_pack ]
+
+verWorkspace :: [Project]
+verWorkspace = projects
+  where
+    workspace = "/home/andregr/work/workspace"
+    projects = map (wsProject workspace)
+      [ financeiro, cobranca_api, touch_protocol, integracao_comercial, comercial,
+        faturamento, bpa_comercial, autorizacao, autorizador, velab_comercial,
+        tiss_comercial, genesis, pessoas, pessoas_comercial, veris_pack ]
 
 wsProject :: FilePath -> (Text, [Text]) -> Project
 wsProject ws (name, aliases) = Project name (ws ++ "/" ++ unpack name) aliases

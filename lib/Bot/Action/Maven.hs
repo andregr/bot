@@ -15,24 +15,28 @@ import Bot.Util
 import Control.Arrow
 import Control.Monad
 import Control.Monad.IO.Class
+import Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Text.XML.Light as X
 import System.Directory
 
-maven :: Text -> Project -> Action
-maven cmd project = do
+maven :: Text -> [(Text, [Text])] -> Project -> Action
+maven cmd projectProfiles project = do
   let path = projectPath project
   isMavenProject <- liftIO $ doesFileExist $ path ++ "/pom.xml"
   unless isMavenProject $ do
     throwA $ "Not a project (pom.xml not found): {}" % pack path
-  output <- silentProjectCommand ("mvn {}" % cmd) project
+  let profiles = case lookup (projectName project) projectProfiles of
+        Nothing -> ""
+        Just ps -> "-P" <> (T.intercalate "," ps)
+  output <- silentProjectCommand ("mvn {} {}" %% (profiles, cmd)) project
   liftIO $
-    if "[ERROR]" `T.isInfixOf` output
+    if "BUILD FAILURE" `T.isInfixOf` output
       then do
-        putStrLn "Command implicitly failed with '[ERROR]' log"
+        T.putStrLn $ shellColor Red xMarkChar <> ". Command implicitly failed with 'BUILD FAILURE' log"
         showOutput output
-      else putStrLn "ok"
+      else T.putStrLn $ shellColor Green checkMarkChar
 
 version :: Project -> Action
 version project = do
