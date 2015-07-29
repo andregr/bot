@@ -4,6 +4,8 @@ module Bot.Action.Maven
   ( maven
   , version
   , parentVersion
+  , changeDependencyVersion
+  , updateDependencyVersions
   , properties
   , snapshots
   ) where
@@ -15,6 +17,7 @@ import Bot.Util
 import Control.Arrow
 import Control.Monad
 import Control.Monad.IO.Class
+import Data.List (inits)
 import Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -34,14 +37,17 @@ maven cmd projectProfiles project = do
   liftIO $
     if "BUILD FAILURE" `T.isInfixOf` output
       then do
-        T.putStrLn $ shellColor Red xMarkChar <> ". Command implicitly failed with 'BUILD FAILURE' log"
+        T.putStrLn $ red xMarkChar <> ". Command implicitly failed with 'BUILD FAILURE' log"
         showOutput output
-      else T.putStrLn $ shellColor Green checkMarkChar
+      else T.putStrLn $ green checkMarkChar
 
 version :: Project -> Action
-version project = do
+version project = projectVersion project >>= (liftIO . T.putStrLn)
+
+projectVersion :: Project -> ActionM Text
+projectVersion project = do
   pom <- readPOM project
-  readSingleValue pom ["project", "version"] >>= (liftIO . T.putStrLn)
+  readSingleValue pom ["project", "version"]
 
 parentVersion :: Project -> Action
 parentVersion project = do
@@ -50,6 +56,26 @@ parentVersion project = do
   version <- readSingleValue pom ["project", "parent", "version"]
                    
   liftIO $ printf "{}: {}" (name, version)
+
+changeDependencyVersion :: Project -> Text -> Text -> Action
+changeDependencyVersion project depName newVersion = do
+  let pomPath = projectPath project ++ "/pom.xml"
+      openTag = "<touch.{}.version>" % depName
+      closeTag = "</touch.{}.version>" % depName
+  void $ bash ("sed 's|\\(.*{}\\).*\\({}.*\\)|\\1{}\\2|g' -i {}" %% (openTag, closeTag, newVersion, pomPath))
+
+updateDependencyVersions :: [Project] -> Action
+updateDependencyVersions projects = do
+    let steps = tail $ inits projects
+    forM_ (zip [0..] steps) $ \(i, s) -> do
+      changeVersionsAction s (projects !! i)
+  
+  where
+    changeVersionsAction :: [Project] -> Project -> Action
+    changeVersionsAction ps t = forM_ ps $ \p -> do
+      let pName = projectName p
+      pVersion <- projectVersion p
+      changeDependencyVersion t pName pVersion
 
 properties :: Project -> Maybe ((Text, Text) -> Bool) -> Action
 properties project mf = do

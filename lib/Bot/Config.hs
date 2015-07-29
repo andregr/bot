@@ -32,21 +32,29 @@ defaultConfiguration = do
     else return (configName . head $ configurations)
 
 configurations :: [Configuration]
-configurations = [ makeConfiguration "com" comWorkspace
-                 , makeConfiguration "gen" genWorkspace
-                 , makeConfiguration "mot" motWorkspace                   
-                 , makeConfiguration "releaser" releaserWorkspace
-                 , makeConfiguration "tprop" tpropWorkspace
-                 , makeConfiguration "liq" liqWorkspace
-                 , makeConfiguration "oco" ocoWorkspace
-                 , makeConfiguration "hist" histWorkspace
-                 , makeConfiguration "ver" verWorkspace
+configurations = [ makeConfiguration "com" comProjects workspace
+                 , makeConfiguration "gen" genProjects workspace
+                 , makeConfiguration "mot" motProjects workspace         
+                 , makeConfiguration "releaser" releaserProjects workspace
+                 , makeConfiguration "tprop" tpropProjects workspace
+                 , makeConfiguration "liq" liqProjects workspace
+                 , makeConfiguration "oco" ocoProjects workspace
+                 , makeConfiguration "hist" histProjects workspace
+                 , makeConfiguration "ver" verProjects workspace
+                 , makeConfiguration "all" allProjects workspace
+                 , makeConfiguration "idea" comProjects ideaWorkspace
                  ]
-
-makeConfiguration :: Text -> [Project] -> Configuration
-makeConfiguration name projects = Configuration name commands help
   where
-    gitOk c p = git c p >> (liftIO $ T.putStrLn $ shellColor Green checkMarkChar)
+    workspace = "/home/andregr/work/workspace"
+    ideaWorkspace = "/home/andregr/work/idea-workspace"
+
+makeConfiguration :: Text -> [(Text, [Text])] -> FilePath -> Configuration
+makeConfiguration name projectDeclarations workspace = Configuration name commands help
+  where
+    printCheckMark = liftIO $ T.putStrLn $ green checkMarkChar
+    gitOk c p = git c p >> printCheckMark
+    changeDepVersionOk n v p = changeDependencyVersion p n v >> printCheckMark
+    projects = map (wsProject workspace) projectDeclarations
     commands =
       [ Command "configure" ["conf"] $
             pure configure
@@ -84,7 +92,7 @@ makeConfiguration name projects = Configuration name commands help
             <$> workspaceProjects
 
       , Command "nuke" [] $
-            forEachProject (\p -> nuke p >> (liftIO $ putStrLn "ok"))
+            forEachProject (\p -> nuke p >> (liftIO $ T.putStrLn $ green checkMarkChar))
             <$> workspaceProjects
 
       , Command "pull" [] $
@@ -104,6 +112,16 @@ makeConfiguration name projects = Configuration name commands help
       , Command "parentVersion" ["pv"] $
             forEachProject parentVersion
             <$> workspaceProjects
+
+      , Command "updateDependencyVersions" ["uv"] $
+            updateDependencyVersions
+            <$> workspaceProjects            
+            
+      , Command "changeDependencyVersion" ["cv"] $
+            forEachProject3 changeDepVersionOk
+            <$> arg "dependencyName" text
+            <*> arg "newVersion" text
+            <*> workspaceProjects            
             
       , Command "properties" ["p"] $
             forEachProject2' properties
@@ -201,79 +219,63 @@ liquibase3 = ("liquibase3", ["liq"])
 touch_liquibase_commons = ("touch-liquibase-commons", ["liqcom"])
 touch_quartz = ("touch-quartz", ["quartz"])
 heals_web_admin = ("heals-web-admin", ["admin"])
+heals = ("heals", ["heals"])
 
 projectProfiles :: [(Text, [Text])]
 projectProfiles = map (fst *** id) $
   [(veris_pack, ["desenvolvimento"])]
 
-comWorkspace :: [Project]
-comWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace"
-    projects = map (wsProject workspace)
-      [ cobranca_api, comercial, touch_protocol, integracao_comercial,
-        faturamento, bpa_comercial, velab_comercial, comercial_lis
+allProjects :: [(Text, [Text])]
+allProjects =
+      [ release_test_root, release_test_alpha, release_test_beta, release_test_charlie, touch_property,
+        bi_temporal, beta, classificacao, modifiers, beta_temporal, app_history, touch_protocol,
+        integracao_comercial, financeiro, cobranca_api, comercial, faturamento, bpa_comercial,
+        autorizacao,autorizador, velab_comercial, tiss_comercial, comercial_lis, velab_root, velab_api,
+        velab, motion_lis, atendimento, genesis, velab_genesis, motion_lis_genesis, pessoas, pessoas_comercial,
+        veris_pack, ocorrencias, armazenamento, liquibase3, touch_liquibase_commons, touch_quartz, heals_web_admin,
+        heals
       ]
 
-genWorkspace :: [Project]
-genWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace"
-    projects = map (wsProject workspace)
+comProjects :: [(Text, [Text])]
+comProjects =
+      [ cobranca_api, comercial, faturamento, velab_comercial, comercial_lis
+      ]
+
+genProjects :: [(Text, [Text])]
+genProjects =
       [ financeiro, cobranca_api, touch_protocol, integracao_comercial, comercial,
         faturamento, bpa_comercial, autorizacao, autorizador, velab_comercial,
         tiss_comercial, genesis, velab_genesis, atendimento, motion_lis_genesis
       ]
 
-motWorkspace :: [Project]
-motWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace"
-    projects = map (wsProject workspace)
+motProjects :: [(Text, [Text])]
+motProjects =
       [ comercial, velab_root, velab_api, velab, motion_lis_genesis ]
 
-releaserWorkspace :: [Project]
-releaserWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace/releaser/test/releaser_workspace"
-    projects = map (wsProject workspace)
+releaserProjects :: [(Text, [Text])]
+releaserProjects =
       [ release_test_root, release_test_alpha, release_test_beta, release_test_charlie ]
 
-tpropWorkspace :: [Project]
-tpropWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace/"
-    projects = map (wsProject workspace)
+tpropProjects :: [(Text, [Text])]
+tpropProjects =
       [ touch_property, bi_temporal, beta, classificacao, modifiers, beta_temporal ]
 
-liqWorkspace :: [Project]
-liqWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace/"
-    projects = map (wsProject workspace)
+liqProjects :: [(Text, [Text])]
+liqProjects =
       [ liquibase3, touch_liquibase_commons, touch_quartz, heals_web_admin,
         touch_property, bi_temporal, beta, modifiers, beta_temporal, comercial_lis,
         motion_lis, motion_lis_genesis, armazenamento ]
 
-ocoWorkspace :: [Project]
-ocoWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace"
-    projects = map (wsProject workspace)
+ocoProjects :: [(Text, [Text])]
+ocoProjects =
       [ faturamento, ocorrencias, autorizacao, autorizador, atendimento, motion_lis_genesis ]
 
-histWorkspace :: [Project]
-histWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace"
-    projects = map (wsProject workspace)
-      [ app_history, comercial_lis, veris_pack ]
+histProjects :: [(Text, [Text])]
+histProjects =
+      [ app_history, comercial_lis, motion_lis_genesis, veris_pack ]
 
-verWorkspace :: [Project]
-verWorkspace = projects
-  where
-    workspace = "/home/andregr/work/workspace"
-    projects = map (wsProject workspace)
+verProjects :: [(Text, [Text])]
+verProjects = 
       [ financeiro, cobranca_api, touch_protocol, integracao_comercial, comercial,
         faturamento, bpa_comercial, autorizacao, autorizador, velab_comercial,
         tiss_comercial, genesis, pessoas, pessoas_comercial, veris_pack ]

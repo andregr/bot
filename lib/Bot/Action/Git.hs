@@ -39,10 +39,11 @@ status project = do
     changes <- changeCount project
     maybeDivergence <- divergence project
     liftIO $ T.putStrLn $ commas $ catMaybes [ formatBranch branch
-                                           , formatChangeCount changes
-                                           , formatDivergence maybeDivergence
-                                           ]
+                                             , formatChangeCount changes
+                                             , formatDivergence maybeDivergence
+                                             ]
   where
+    formatBranch "master" = Just (green "master")
     formatBranch b = Just b
     
     formatChangeCount 0 = Nothing
@@ -51,10 +52,10 @@ status project = do
 
     formatDivergence Nothing = Nothing
     formatDivergence (Just (0,0)) = Nothing
-    formatDivergence (Just (ahead,0)) = Just $ "{} ahead" % (pack . show) ahead
+    formatDivergence (Just (ahead,0)) = Just $ ("{} {}") %% ((pack . show) ahead, green "ahead")
     formatDivergence (Just (0,behind)) = Just $ "{} behind" % (pack . show) behind
     formatDivergence (Just (ahead,behind)) = Just $
-      "diverged ({} ahead, {} behind)" %% (show ahead, show behind)
+      ("{} ({} ahead, {} behind)") %% (red "diverged", show ahead, show behind)
 
 deleteBranches :: Project -> Action
 deleteBranches project = cd (projectPath project) $ do

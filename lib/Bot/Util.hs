@@ -25,6 +25,9 @@ module Bot.Util
   , xMarkChar
   , C.Color(..)
   , shellColor
+  , red
+  , green
+  , blue
   ) where
 
 import Control.Monad.IO.Class          ( MonadIO )
@@ -83,6 +86,11 @@ checkMarkChar = "\10004"
 xMarkChar = "\10008"
 
 shellColor :: C.Color -> Text -> Text
-shellColor c t = T.pack (C.setSGRCode [C.SetColor C.Foreground C.Vivid c])
+shellColor c t = T.pack (C.setSGRCode [C.SetColor C.Foreground C.Dull c])
               <> t
               <> T.pack (C.setSGRCode [C.Reset])
+
+red, green, blue :: Text -> Text
+red = shellColor C.Red
+green = shellColor C.Green
+blue = shellColor C.Blue

@@ -8,6 +8,8 @@ module Bot.Action.Action
   , forEachProject
   , forEachProject2
   , forEachProject2'
+  , forEachProject3
+  , forEachProject3'    
   , showOutput
   , silentProjectCommand
   , bashAction
@@ -130,20 +132,31 @@ showOutput c
 
 forEachProject :: (Project -> Action) -> [Project] -> Action
 forEachProject action projects = forM_ projects $ \project -> do
-    putProjectName project >> action project
+    putProjectName (maxProjectNameLength projects) project >> action project
 
 forEachProject2 :: (a -> Project -> Action) -> a -> [Project] -> Action
 forEachProject2 action arg1 projects = forM_ projects $ \project -> do
-    putProjectName project >> action arg1 project
+    putProjectName (maxProjectNameLength projects) project >> action arg1 project
 
 forEachProject2' :: (Project -> a -> Action) -> [Project] -> a -> Action
 forEachProject2' action projects arg2 = forM_ projects $ \project -> do
-    putProjectName project >> action project arg2
+    putProjectName (maxProjectNameLength projects) project >> action project arg2
 
-putProjectName :: Project -> ActionM ()
-putProjectName p = liftIO $ do
-  T.putStr (leftAlign 30 $ projectName p <> ":  ")
+forEachProject3 :: (a -> b -> Project -> Action) -> a -> b -> [Project] -> Action
+forEachProject3 action arg1 arg2 projects = forM_ projects $ \project -> do
+    putProjectName (maxProjectNameLength projects) project >> action arg1 arg2 project
+
+forEachProject3' :: (Project -> a -> b -> Action) -> [Project] -> a -> b -> Action
+forEachProject3' action projects arg2 arg3 = forM_ projects $ \project -> do
+    putProjectName (maxProjectNameLength projects) project >> action project arg2 arg3
+
+putProjectName :: Int -> Project -> ActionM ()
+putProjectName minWidth p = liftIO $ do
+  T.putStr (leftAlign (minWidth + 3) $ projectName p <> ":  ")
   hFlush stdout
+
+maxProjectNameLength :: [Project] -> Int
+maxProjectNameLength ps = maximum $ map (T.length . projectName) ps
 
 silentProjectCommand :: Text -> Project -> ActionM Text
 silentProjectCommand cmd project =
